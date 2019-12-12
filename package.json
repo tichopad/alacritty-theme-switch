@@ -1,7 +1,7 @@
 {
   "name": "alacritty-switch-theme",
   "version": "1.0.0",
-  "description": "CLI for Alacritty terminal emulator color theme switching.",
+  "description": "CLI for Alacritty color theme switching.",
   "main": "index.js",
   "bin": {
     "alacritty-switch-theme": "./cli.js"
