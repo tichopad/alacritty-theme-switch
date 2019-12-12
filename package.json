@@ -1,0 +1,34 @@
+{
+  "name": "alacritty-switch-theme",
+  "version": "1.0.0",
+  "description": "CLI for Alacritty terminal emulator color theme switching.",
+  "main": "index.js",
+  "bin": {
+    "alacritty-switch-theme": "./cli.js"
+  },
+  "keywords": [
+    "cli",
+    "command",
+    "console",
+    "terminal",
+    "alacritty"
+  ],
+  "author": {
+    "name": "Michael Tichopád",
+    "email": "michael@tichopad.dev",
+    "url": "https://tichopad.dev"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^3.0.0",
+    "fs-extra": "^8.1.0",
+    "inquirer": "^7.0.0",
+    "js-yaml": "^3.13.1",
+    "klaw-sync": "^6.0.0",
+    "meow": "^6.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^6.7.2",
+    "prettier": "^1.19.1"
+  }
+}
