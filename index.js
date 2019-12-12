@@ -26,6 +26,7 @@ async function applyTheme(themePath, rootConfigPath) {
 function loadThemes(directoryPath) {
   fs.ensureDirSync(directoryPath);
   const onlyYaml = item => path.extname(item.path) === '.yml';
+
   return klaw(directoryPath, { nodir: true, filter: onlyYaml });
 }
 
