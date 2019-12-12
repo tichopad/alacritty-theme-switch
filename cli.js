@@ -6,7 +6,7 @@ const meow = require('meow');
 const path = require('path');
 const inquirer = require('inquirer');
 const process = require('process');
-const { loadThemes, applyTheme, unslugify } = require('./index');
+const { loadThemes, applyTheme, unslugify, useSaveSelectedTheme } = require('./index');
 const home = require('os').homedir();
 const error = text => console.log(chalk.red(text + '\n'));
 const success = text => console.log(chalk.bold.green(text + '\n'));
@@ -47,58 +47,74 @@ const cli = meow(
   }
 );
 
-// Validate CLI parameters
-try {
-  // Check if given configuration is a file
-  if (fs.statSync(cli.flags.config).isFile() === false) {
-    throw new Error(`Configuration ${cli.flags.config} is not a file.`);
-  }
-  // Check if configuration is in YAML format
-  if (path.extname(cli.flags.config) !== '.yml') {
-    throw new Error(`Configuration file ${cli.flags.config} is not a YAML file.`);
-  }
-  // If given theme directory exists, check if it's really a directory
-  if (fs.exists(cli.flags.themes) && fs.statSync(cli.flags.themes).isDirectory() === false) {
-    throw new Error(`Given "themes" attribute ${cli.flags.themes} must be a directory.`);
-  }
-} catch (err) {
-  error(err);
-  process.exit(1);
-}
-
-// Load theme config files
-const themes = loadThemes(cli.flags.themes);
-
-if (themes.length === 0) {
-  error(`No theme files were found at ${cli.flags.themes}`);
-  process.exit(1);
-}
-
-// Create prompt themes choices with readable names
-const themesChoices = themes.map(item => ({
-  name: unslugify(path.basename(item.path)),
-  value: item.path,
-}));
-
-// Display prompt
-const questions = [
-  {
-    type: 'list',
-    name: 'theme',
-    message: 'Choose Alacritty color theme:',
-    choices: themesChoices,
-    pageSize: 25,
-  },
-];
-inquirer.prompt(questions).then(async answer => {
+(async () => {
+  // Validate CLI parameters
   try {
-    // Backup Alacritty config file
-    await fs.copyFile(cli.flags.config, cli.flags.backup);
-    await applyTheme(answer.theme, cli.flags.config);
-    success('Theme applied.');
-    process.exit(0);
+    // Check if given configuration is a file
+    const configStat = await fs.stat(cli.flags.config);
+    if (configStat.isFile() === false) {
+      throw new Error(`Configuration ${cli.flags.config} is not a file.`);
+    }
+    // Check if configuration is in YAML format
+    if (path.extname(cli.flags.config) !== '.yml') {
+      throw new Error(`Configuration file ${cli.flags.config} is not a YAML file.`);
+    }
+    // If given theme directory exists, check if it's really a directory
+    const themesStat = await fs.stat(cli.flags.themes);
+    if (themesStat.isDirectory() === false) {
+      throw new Error(`Given "themes" attribute ${cli.flags.themes} must be a directory.`);
+    }
   } catch (err) {
     error(err);
     process.exit(1);
   }
-});
+
+  // Handle saving last selected theme state
+  const saveFile = path.resolve(cli.flags.themes, '.selected_theme');
+  const { saveSelected, getSelected } = useSaveSelectedTheme(saveFile);
+  const lastSelected = await getSelected();
+
+  // Load theme config files
+  const themes = await loadThemes(cli.flags.themes);
+
+  if (themes.length === 0) {
+    error(`No theme files were found at ${cli.flags.themes}`);
+    process.exit(1);
+  }
+
+  // Create prompt themes choices with readable names
+  const themesChoices = themes.map(item => {
+    const isLastSelected = lastSelected === item.path;
+    const name = unslugify(path.basename(item.path));
+
+    return {
+      name: isLastSelected ? chalk.bold(`${name} (last selected)`) : name,
+      value: item.path,
+    };
+  });
+
+  // Display prompt
+  const questions = [
+    {
+      type: 'list',
+      name: 'theme',
+      message: 'Select Alacritty color theme:',
+      choices: themesChoices,
+      pageSize: 25,
+    },
+  ];
+  inquirer.prompt(questions).then(async answer => {
+    try {
+      // Backup Alacritty config file
+      await fs.copyFile(cli.flags.config, cli.flags.backup);
+      // Merge changes to the config file
+      await applyTheme(answer.theme, cli.flags.config);
+      // Save the selected theme filename
+      await saveSelected(answer.theme);
+      success('Theme applied.');
+    } catch (err) {
+      error(err);
+      process.exit(1);
+    }
+  });
+})();
