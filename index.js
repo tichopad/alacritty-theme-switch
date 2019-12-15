@@ -7,6 +7,7 @@ const path = require('path');
 /**
  * Apply theme configuration to the main Alacritty config file.
  * @param {String} themePath Theme config file path
+ * @param {String} rootConfigPath Main Alacritty configuration file path
  * @returns {Promise<void>}
  */
 async function applyTheme(themePath, rootConfigPath) {
@@ -75,6 +76,7 @@ function useSaveSelectedTheme(saveFile) {
       if (await fs.exists(saveFile)) {
         return fs.readFile(saveFile, { encoding: 'utf-8' });
       }
+
       return null;
     },
   };
@@ -85,5 +87,6 @@ module.exports = {
   applyTheme,
   readYaml,
   unslugify,
+  pipe,
   useSaveSelectedTheme,
 };
