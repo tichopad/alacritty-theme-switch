@@ -59,7 +59,7 @@ const cli = meow(
     if (path.extname(cli.flags.config) !== '.yml') {
       throw new Error(`Configuration file ${cli.flags.config} is not a YAML file.`);
     }
-    // If given theme directory exists, check if it's really a directory
+    // Check if given theme directory exists and it's really a directory
     const themesStat = await fs.stat(cli.flags.themes);
     if (themesStat.isDirectory() === false) {
       throw new Error(`Given "themes" attribute ${cli.flags.themes} must be a directory.`);

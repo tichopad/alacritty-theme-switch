@@ -73,7 +73,7 @@ function useSaveSelectedTheme(saveFile) {
   return {
     saveSelected: themeFile => fs.writeFile(saveFile, themeFile),
     getSelected: async () => {
-      if (await fs.exists(saveFile)) {
+      if (await fs.pathExists(saveFile)) {
         return fs.readFile(saveFile, { encoding: 'utf-8' });
       }
 

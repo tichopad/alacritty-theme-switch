@@ -9,7 +9,7 @@ const {
 const mockFs = require('mock-fs');
 const fs = require('fs-extra');
 
-beforeAll(() => {
+beforeEach(() => {
   // Mock "fs" module with in-memory filesystem
   mockFs({
     'alacritty.yml': `
@@ -38,7 +38,7 @@ beforeAll(() => {
   });
 });
 
-afterAll(() => {
+afterEach(() => {
   // Restore "fs" module
   mockFs.restore();
 });
@@ -109,12 +109,20 @@ test('Function "applyTheme" merges given config file with root config file', asy
   });
 });
 
-test('Function "useSaveSelectedTheme" saves and loads savefile correctly', async () => {
-  const savefile = useSaveSelectedTheme('.selected_theme');
-  await savefile.saveSelected('themes/monokai_pro.yml');
-  const savefileExists = fs.existsSync('.selected_theme');
-  const savedData = await savefile.getSelected();
+describe('Function "useSaveSelectedTheme"', () => {
+  test('Saves and loads savefile correctly', async () => {
+    const savefile = useSaveSelectedTheme('.selected_theme');
+    await savefile.saveSelected('themes/monokai_pro.yml');
+    const savefileExists = await fs.pathExists('.selected_theme');
+    const savedData = await savefile.getSelected();
 
-  expect(savefileExists).toBe(true);
-  expect(savedData).toBe('themes/monokai_pro.yml');
+    expect(savefileExists).toBe(true);
+    expect(savedData).toBe('themes/monokai_pro.yml');
+  });
+  test('Returns null if the savefile does not exist', async () => {
+    const savefile = useSaveSelectedTheme('.selected_theme');
+    const savedData = await savefile.getSelected();
+
+    expect(savedData).toBeNull();
+  });
 });
