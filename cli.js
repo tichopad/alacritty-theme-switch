@@ -103,18 +103,18 @@ const cli = meow(
       pageSize: 25,
     },
   ];
-  inquirer.prompt(questions).then(async answer => {
-    try {
-      // Backup Alacritty config file
-      await fs.copyFile(cli.flags.config, cli.flags.backup);
-      // Merge changes to the config file
-      await applyTheme(answer.theme, cli.flags.config);
-      // Save the selected theme filename
-      await saveSelected(answer.theme);
-      success('Theme applied.');
-    } catch (err) {
-      error(err);
-      process.exit(1);
-    }
-  });
+  const answer = await inquirer.prompt(questions);
+
+  try {
+    // Backup Alacritty config file
+    await fs.copyFile(cli.flags.config, cli.flags.backup);
+    // Merge changes to the config file
+    await applyTheme(answer.theme, cli.flags.config);
+    // Save the selected theme filename
+    await saveSelected(answer.theme);
+    success('Theme applied.');
+  } catch (err) {
+    error(err);
+    process.exit(1);
+  }
 })();
