@@ -3,6 +3,18 @@ const yaml = require('js-yaml');
 const fs = require('fs-extra');
 const klaw = require('klaw-sync');
 const path = require('path');
+const deepmerge = require('deepmerge');
+
+/**
+ * Checks if given file is a YAML by it's extension.
+ * @param {String} filePath Absolute or relative file path
+ * @returns {Boolean}
+ */
+function isYaml(filePath) {
+  const extension = path.extname(filePath);
+
+  return ['.yml', '.yaml'].includes(extension);
+}
 
 /**
  * Apply theme configuration to the main Alacritty config file.
@@ -13,7 +25,7 @@ const path = require('path');
 async function applyTheme(themePath, rootConfigPath) {
   const config = await readYaml(rootConfigPath);
   const theme = await readYaml(themePath);
-  const merged = { ...config, ...theme };
+  const merged = deepmerge(config, theme);
   const mergedConfig = yaml.safeDump(merged);
 
   await fs.writeFile(rootConfigPath, mergedConfig);
@@ -26,9 +38,12 @@ async function applyTheme(themePath, rootConfigPath) {
  */
 async function loadThemes(directoryPath) {
   await fs.ensureDir(directoryPath);
-  const onlyYaml = item => path.extname(item.path) === '.yml';
+  const themeFiles = klaw(directoryPath, {
+    nodir: true,
+    filter: item => isYaml(item.path),
+  });
 
-  return klaw(directoryPath, { nodir: true, filter: onlyYaml });
+  return themeFiles;
 }
 
 /**
@@ -37,6 +52,10 @@ async function loadThemes(directoryPath) {
  * @returns {Promise<Object>}
  */
 async function readYaml(filePath) {
+  if (!isYaml(filePath)) {
+    throw new Error(`Given file ${filePath} is not a YAML.`);
+  }
+
   const yamlFile = await fs.readFile(filePath, { encoding: 'utf-8' });
 
   return yaml.safeLoad(yamlFile);
@@ -49,9 +68,8 @@ async function readYaml(filePath) {
  */
 function unslugify(text) {
   const withoutUnderscore = text => text.replace(/_+/g, ' ');
-  const withoutExtension = text => text.replace('.yml', '');
-  const withProperCase = text =>
-    text.replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.substr(1).toLowerCase());
+  const withoutExtension = text => text.replace(/\.yml|\.yaml/, '');
+  const withProperCase = text => text.replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.substr(1).toLowerCase());
 
   return pipe(text)(withoutUnderscore, withoutExtension, withProperCase);
 }

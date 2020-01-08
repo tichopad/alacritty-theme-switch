@@ -1,11 +1,4 @@
-const {
-  pipe,
-  unslugify,
-  readYaml,
-  loadThemes,
-  applyTheme,
-  useSaveSelectedTheme,
-} = require('../index');
+const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../index');
 const mockFs = require('mock-fs');
 const fs = require('fs-extra');
 
@@ -34,6 +27,16 @@ beforeEach(() => {
             background: '0x555555'
             foreground: '0x666666'
       `,
+      'deep_one.yml': `
+        colors:
+          primary:
+            background: '0x777777'
+      `,
+      'not_a_yaml.json': `
+        {
+          hello: "There!"
+        }
+      `,
     },
   });
 });
@@ -56,23 +59,10 @@ test('Function "pipe" correctly applies all given functions in order', () => {
 });
 
 test('Function "unslugify" transforms "slugified" YAML filenames to readable format', () => {
-  const slugs = ['monokai_pro.yml', 'terminal.app.yml', 'walton-lincoln_dark.yml', 'breeze.yml'];
+  const slugs = ['monokai_pro.yml', 'terminal.app.yml', 'walton-lincoln_dark.yaml', 'breeze.yaml'];
   const transformed = slugs.map(unslugify);
 
   expect(transformed).toEqual(['Monokai Pro', 'Terminal.app', 'Walton-lincoln Dark', 'Breeze']);
-});
-
-test('Function "readYaml" loads YAML file as an object', async () => {
-  const yaml = await readYaml('themes/monokai_pro.yml');
-
-  expect(yaml).toEqual({
-    colors: {
-      primary: {
-        background: '0x333333',
-        foreground: '0x444444',
-      },
-    },
-  });
 });
 
 test('Function "loadThemes" lists all YAML files in a directory', async () => {
@@ -84,28 +74,70 @@ test('Function "loadThemes" lists all YAML files in a directory', async () => {
       stats: expect.anything(),
     },
     {
+      path: expect.stringMatching(/deep_one\.yml$/),
+      stats: expect.anything(),
+    },
+    {
       path: expect.stringMatching(/monokai_pro\.yml$/),
       stats: expect.anything(),
     },
   ]);
 });
 
-test('Function "applyTheme" merges given config file with root config file', async () => {
-  await applyTheme('themes/monokai_pro.yml', 'alacritty.yml');
-  const yaml = await readYaml('alacritty.yml');
+describe('Function "readYaml"', () => {
+  test('Loads YAML file as an object', async () => {
+    const yaml = await readYaml('themes/monokai_pro.yml');
 
-  expect(yaml).toEqual({
-    colors: {
-      primary: {
-        background: '0x333333',
-        foreground: '0x444444',
+    expect(yaml).toEqual({
+      colors: {
+        primary: {
+          background: '0x333333',
+          foreground: '0x444444',
+        },
       },
-    },
-    font: {
-      normal: {
-        style: 'Regular',
+    });
+  });
+  test('Throws when passed file is not a YAML', async () => {
+    expect(readYaml('themes/not_a_yaml.txt')).rejects.toBeInstanceOf(Error);
+  });
+});
+
+describe('Function "applyTheme"', () => {
+  test('Merges given config file with root config file', async () => {
+    await applyTheme('themes/monokai_pro.yml', 'alacritty.yml');
+    const yaml = await readYaml('alacritty.yml');
+
+    expect(yaml).toEqual({
+      colors: {
+        primary: {
+          background: '0x333333',
+          foreground: '0x444444',
+        },
       },
-    },
+      font: {
+        normal: {
+          style: 'Regular',
+        },
+      },
+    });
+  });
+  test('Merges given config file deeply', async () => {
+    await applyTheme('themes/deep_one.yml', 'alacritty.yml');
+    const yaml = await readYaml('alacritty.yml');
+
+    expect(yaml).toEqual({
+      colors: {
+        primary: {
+          background: '0x777777',
+          foreground: '0x222222',
+        },
+      },
+      font: {
+        normal: {
+          style: 'Regular',
+        },
+      },
+    });
   });
 });
 
