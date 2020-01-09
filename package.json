@@ -1,24 +1,38 @@
 {
-  "name": "alacritty-switch-theme",
+  "name": "alacritty-theme-switch",
   "version": "1.0.0",
-  "description": "CLI for Alacritty color theme switching.",
-  "main": "index.js",
-  "bin": {
-    "alacritty-switch-theme": "./cli.js"
+  "description": "CLI for Alacritty color theme and configuration switching.",
+  "main": "./src/index.js",
+  "bin": "./src/cli.js",
+  "author": {
+    "name": "Michael Tichopád",
+    "email": "michael@tichopad.dev"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tichopad/alacritty-theme-switch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tichopad/alacritty-theme-switch/issues"
+  },
+  "homepage": "https://github.com/tichopad/alacritty-theme-switch#readme",
+  "license": "MIT",
   "keywords": [
     "cli",
     "command",
     "console",
     "terminal",
-    "alacritty"
+    "alacritty",
+    "theme",
+    "configuration"
   ],
-  "author": {
-    "name": "Michael Tichopád",
-    "email": "michael@tichopad.dev",
-    "url": "https://tichopad.dev"
+  "scripts": {
+    "start": "npm run format && npm run lint && jest --watch",
+    "test": "jest",
+    "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
+    "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
+    "prepublish": "npm run format && npm run lint && npm run test"
   },
-  "license": "MIT",
   "dependencies": {
     "chalk": "^3.0.0",
     "deepmerge": "^4.2.2",
@@ -33,8 +47,5 @@
     "jest": "^24.9.0",
     "mock-fs": "^4.10.4",
     "prettier": "^1.19.1"
-  },
-  "scripts": {
-    "test": "jest"
   }
 }

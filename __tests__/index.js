@@ -1,4 +1,4 @@
-const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../index');
+const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../src/index');
 const mockFs = require('mock-fs');
 const fs = require('fs-extra');
 
@@ -21,13 +21,13 @@ beforeEach(() => {
             background: '0x333333'
             foreground: '0x444444'
       `,
-      'breeze.yml': `
+      'breeze.yaml': `
         colors:
           primary:
             background: '0x555555'
             foreground: '0x666666'
       `,
-      'deep_one.yml': `
+      'deep_one.yaml': `
         colors:
           primary:
             background: '0x777777'
@@ -65,16 +65,16 @@ test('Function "unslugify" transforms "slugified" YAML filenames to readable for
   expect(transformed).toEqual(['Monokai Pro', 'Terminal.app', 'Walton-lincoln Dark', 'Breeze']);
 });
 
-test('Function "loadThemes" lists all YAML files in a directory', async () => {
+test('Function "loadThemes" lists all YAML files in a directory sorted', async () => {
   const files = await loadThemes('themes');
 
   expect(files).toEqual([
     {
-      path: expect.stringMatching(/breeze\.yml$/),
+      path: expect.stringMatching(/breeze\.yaml$/),
       stats: expect.anything(),
     },
     {
-      path: expect.stringMatching(/deep_one\.yml$/),
+      path: expect.stringMatching(/deep_one\.yaml$/),
       stats: expect.anything(),
     },
     {
@@ -122,7 +122,7 @@ describe('Function "applyTheme"', () => {
     });
   });
   test('Merges given config file deeply', async () => {
-    await applyTheme('themes/deep_one.yml', 'alacritty.yml');
+    await applyTheme('themes/deep_one.yaml', 'alacritty.yml');
     const yaml = await readYaml('alacritty.yml');
 
     expect(yaml).toEqual({
