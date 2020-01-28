@@ -44,6 +44,8 @@ Create new YAML file in your color themes directory.
 
 Write your color theme configuration to the file or copy/paste anything from the [official repository themes list](https://github.com/alacritty/alacritty/wiki/Color-schemes).
 
+You can add as many files as you want.
+
 Example:
 
 ```
