@@ -6,7 +6,7 @@ const meow = require('meow');
 const path = require('path');
 const inquirer = require('inquirer');
 const process = require('process');
-const { loadThemes, applyTheme, unslugify, useSaveSelectedTheme } = require('./index');
+const { loadThemes, applyTheme, unslugify, useSaveSelectedTheme, isYaml } = require('./index');
 const home = require('os').homedir();
 const error = text => console.log(chalk.red(text + '\n'));
 const success = text => console.log(chalk.bold.green(text + '\n'));
@@ -56,7 +56,7 @@ const cli = meow(
       throw new Error(`Configuration ${cli.flags.config} is not a file.`);
     }
     // Check if configuration is in YAML format
-    if (path.extname(cli.flags.config) !== '.yml') {
+    if (isYaml(path.extname(cli.flags.config)) === false) {
       throw new Error(`Configuration file ${cli.flags.config} is not a YAML file.`);
     }
     // Check if given theme directory exists and it's really a directory

@@ -52,7 +52,7 @@ async function loadThemes(directoryPath) {
  * @returns {Promise<Object>}
  */
 async function readYaml(filePath) {
-  if (!isYaml(filePath)) {
+  if (isYaml(filePath) === false) {
     throw new Error(`Given file ${filePath} is not a YAML.`);
   }
 
@@ -107,4 +107,5 @@ module.exports = {
   unslugify,
   pipe,
   useSaveSelectedTheme,
+  isYaml,
 };
