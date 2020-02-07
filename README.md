@@ -23,7 +23,21 @@ Run
 
 inside your terminal.
 
-# How to
+# Configuration
+
+The utility can be configured by passing additional flags/parameters:
+
+1. `--config` or `-c` Path to the alacritty's configuration file
+   - E.g.: `alacritty-switch-theme --config ~/.config/alacritty/alacritty.yml`
+   - Default: `$HOME/.config/alacritty/alacritty.yml`
+2. `--themes` or `-t` Path to the directory containing custom themes' files
+   - E.g.: `alacritty-switch-theme --themes ~/alacritty-themes`
+   - Default: `$HOME/.config/alacritty/themes`
+3. `--backup` or `-b` Path to the alacritty's configuration file backup made before every switch
+   - E.g.: `alacritty-switch-theme --backup ~/backup/alacritty.backup.yml`
+   - Default: `.config/alacritty/alacritty.theme-switch-backup.yml`
+
+# Usage
 
 ## 1) Create folder for your color themes
 
@@ -96,3 +110,15 @@ colors:
   Ayu Dark (last selected)
 ❯ Monokai
 ```
+
+# Last selected theme
+
+After a theme is applied, it's name is saved to a file named `.selected_theme` inside the themes directory. This information is then used to keep track of the last selected theme.
+
+If you manually change the alacritty colors configuration or rename the last selected theme's configuration file, the information will be lost.
+
+# OS support
+
+This hasn't been tested on Windows and OS X yet. There'll probably be issues with default settings, as it's looking for the `$HOME/.config/alacritty` folder, but after setting the `--config`, `--themes` and `--backup` flags, it should work just fine.
+
+Create an issue or pull request if you want to add out-of-the-box support for your platform of choice.

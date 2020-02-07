@@ -16,6 +16,11 @@ const cli = meow(
     Usage
       $ alacritty-switch-theme <options>
 
+      By default, this utility will look for the alacritty's configuration file in
+      "$HOME/.config/alacritty/alacritty.yml", for the theme files in "$HOME/.config/alacritty/themes" and will try to
+      create a backup of alacritty's configuration file at "$HOME/.config/alacritty/alacritty.backup.yml".
+      These paths can be changed via options.
+
     Options
       --config, -c Alacritty configuration file
       --themes, -t Themes' configuration files root directory
