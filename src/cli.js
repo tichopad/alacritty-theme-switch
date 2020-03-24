@@ -25,7 +25,7 @@ const cli = meow(
       --config, -c Alacritty configuration file
       --themes, -t Themes' configuration files root directory
       --backup, -b Backup of the original Alacritty configuration file before new theme is applied
-      --select, -s Use the theme file instead of showing the propmpt
+      --select, -s Use a theme file instead of showing the prompt (path is relative to the themes' directory)
 
     Examples
       $ alacritty-switch-theme --config ~/.config/alacritty/alacritty.yml
