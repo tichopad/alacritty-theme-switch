@@ -78,14 +78,13 @@ const cli = meow(
       throw new Error(`Given "themes" attribute ${cli.flags.themes} must be a directory.`);
     }
 
-    if(cli.flags.select) {
+    if (cli.flags.select) {
       selectedThemeFile = path.join(cli.flags.themes, cli.flags.select);
       const configStat = await fs.stat(selectedThemeFile);
       if (configStat.isFile() === false) {
         throw new Error(`Selected theme file is not a file`);
       }
     }
-
   } catch (err) {
     error(err);
     process.exit(1);
@@ -105,8 +104,7 @@ const cli = meow(
   }
 
   // Create prompt themes choices with readable names
-  let themeFile;
-  if(selectedThemeFile === null) {
+  if (selectedThemeFile === null) {
     const themesChoices = themes.map(item => {
       const isLastSelected = lastSelected === item.path;
       const name = unslugify(path.basename(item.path));
@@ -127,8 +125,8 @@ const cli = meow(
         pageSize: 25,
       },
     ];
-    answer = await inquirer.prompt(questions);
-    selectedThemeFile = answer.theme
+    const answer = await inquirer.prompt(questions);
+    selectedThemeFile = answer.theme;
   }
 
   try {
