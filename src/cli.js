@@ -25,11 +25,13 @@ const cli = meow(
       --config, -c Alacritty configuration file
       --themes, -t Themes' configuration files root directory
       --backup, -b Backup of the original Alacritty configuration file before new theme is applied
+      --select, -s Use a theme file instead of showing the prompt (path is relative to the themes' directory)
 
     Examples
       $ alacritty-switch-theme --config ~/.config/alacritty/alacritty.yml
       $ alacritty-switch-theme --themes ~/alacritty-themes
       $ alacritty-switch-theme --backup ~/backup/alacritty.backup.yml
+      $ alacritty-switch-theme --select monokai.yml
 `,
   {
     flags: {
@@ -48,11 +50,17 @@ const cli = meow(
         alias: 'b',
         default: `${home}/.config/alacritty/alacritty.theme-switch-backup.yml`,
       },
+      select: {
+        type: 'string',
+        alias: 's',
+      },
     },
   }
 );
 
 (async () => {
+  let selectedThemeFile = null;
+
   // Validate CLI parameters
   try {
     // Check if given configuration is a file
@@ -68,6 +76,14 @@ const cli = meow(
     const themesStat = await fs.stat(cli.flags.themes);
     if (themesStat.isDirectory() === false) {
       throw new Error(`Given "themes" attribute ${cli.flags.themes} must be a directory.`);
+    }
+
+    if (cli.flags.select) {
+      selectedThemeFile = path.join(cli.flags.themes, cli.flags.select);
+      const configStat = await fs.stat(selectedThemeFile);
+      if (configStat.isFile() === false) {
+        throw new Error(`Selected theme file is not a file`);
+      }
     }
   } catch (err) {
     error(err);
@@ -88,35 +104,38 @@ const cli = meow(
   }
 
   // Create prompt themes choices with readable names
-  const themesChoices = themes.map(item => {
-    const isLastSelected = lastSelected === item.path;
-    const name = unslugify(path.basename(item.path));
+  if (selectedThemeFile === null) {
+    const themesChoices = themes.map(item => {
+      const isLastSelected = lastSelected === item.path;
+      const name = unslugify(path.basename(item.path));
 
-    return {
-      name: isLastSelected ? chalk.bold(`${name} (last selected)`) : name,
-      value: item.path,
-    };
-  });
+      return {
+        name: isLastSelected ? chalk.bold(`${name} (last selected)`) : name,
+        value: item.path,
+      };
+    });
 
-  // Display prompt
-  const questions = [
-    {
-      type: 'list',
-      name: 'theme',
-      message: 'Select Alacritty color theme:',
-      choices: themesChoices,
-      pageSize: 25,
-    },
-  ];
-  const answer = await inquirer.prompt(questions);
+    // Display prompt
+    const questions = [
+      {
+        type: 'list',
+        name: 'theme',
+        message: 'Select Alacritty color theme:',
+        choices: themesChoices,
+        pageSize: 25,
+      },
+    ];
+    const answer = await inquirer.prompt(questions);
+    selectedThemeFile = answer.theme;
+  }
 
   try {
     // Backup Alacritty config file
     await fs.copyFile(cli.flags.config, cli.flags.backup);
     // Merge changes to the config file
-    await applyTheme(answer.theme, cli.flags.config);
+    await applyTheme(selectedThemeFile, cli.flags.config);
     // Save the selected theme filename
-    await saveSelected(answer.theme);
+    await saveSelected(selectedThemeFile);
     success('Theme applied.');
   } catch (err) {
     error(err);
