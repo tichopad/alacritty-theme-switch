@@ -36,6 +36,7 @@ The utility can be configured by passing additional flags/parameters:
 3. `--backup` or `-b` Path to the alacritty's configuration file backup made before every switch
    - E.g.: `alacritty-switch-theme --backup ~/backup/alacritty.backup.yml`
    - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.yml`
+4. `--select` or `-s` Path (relative to themes' directory) to a single configuration file that should be used directly instead of prompting a select
 
 # Usage
 
