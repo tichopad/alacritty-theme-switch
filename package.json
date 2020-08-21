@@ -36,11 +36,13 @@
     "configuration"
   ],
   "scripts": {
-    "start": "run-p format lint \"test:unit -- --watch\"",
-    "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
-    "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
-    "test": "run-p format lint test:unit",
-    "test:unit": "jest"
+    "start": "run-p fix:* \"test:unit -- --watch\"",
+    "test": "run-p \"format -- --check\" lint test:unit",
+    "test:unit": "jest",
+    "fix:format": "npm run format -- --write",
+    "fix:lint": "npm run lint -- --fix",
+    "format": "prettier \"src/**/*.js\" \"__tests__/**/*.js\"",
+    "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\""
   },
   "dependencies": {
     "chalk": "^4.1.0",

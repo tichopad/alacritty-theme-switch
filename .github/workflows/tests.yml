@@ -19,10 +19,16 @@ jobs:
         node-version: [10.x, 12.x, 14.x]
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Begin CI
+      uses: actions/checkout@v2
+
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm test
+
+    - name: Clean install
+      run: npm ci
+
+    - name: Lint, formatting and test
+      run: npm test
