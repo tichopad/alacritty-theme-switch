@@ -36,11 +36,10 @@
     "configuration"
   ],
   "scripts": {
-    "start": "run-p pretest \"test:unit -- --watch\"",
+    "start": "run-p format lint \"test:unit -- --watch\"",
     "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
     "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
-    "pretest": "run-p format lint",
-    "test": "run-p pretest test:unit",
+    "test": "run-p format lint test:unit",
     "test:unit": "jest"
   },
   "dependencies": {
