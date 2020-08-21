@@ -1,9 +1,8 @@
-const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../src/index');
-const mockFs = require('mock-fs');
 const fs = require('fs-extra');
+const mockFs = require('mock-fs');
+const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../src/index');
 
 beforeEach(() => {
-  // Mock "fs" module with in-memory filesystem
   mockFs({
     'alacritty.yml': `
       colors:
@@ -42,46 +41,51 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Restore "fs" module
   mockFs.restore();
 });
 
-test('Function "pipe" correctly applies all given functions in order', () => {
-  const mockUpperCase = jest.fn(s => s.toUpperCase());
-  const mockAddOranges = jest.fn(s => `${s}, oranges`);
-  const mockExclaim = jest.fn(s => `${s}!`);
-  const result = pipe('apples')(mockUpperCase, mockAddOranges, mockExclaim);
+describe('Function "pipe"', () => {
+  test('Correctly applies all given functions in order', () => {
+    const mockUpperCase = jest.fn(s => s.toUpperCase());
+    const mockAddOranges = jest.fn(s => `${s}, oranges`);
+    const mockExclaim = jest.fn(s => `${s}!`);
+    const result = pipe('apples')(mockUpperCase, mockAddOranges, mockExclaim);
 
-  expect(result).toBe('APPLES, oranges!');
-  expect(mockUpperCase).toHaveBeenCalledWith('apples');
-  expect(mockAddOranges).toHaveBeenCalledWith('APPLES');
-  expect(mockExclaim).toHaveBeenCalledWith('APPLES, oranges');
+    expect(result).toBe('APPLES, oranges!');
+    expect(mockUpperCase).toHaveBeenCalledWith('apples');
+    expect(mockAddOranges).toHaveBeenCalledWith('APPLES');
+    expect(mockExclaim).toHaveBeenCalledWith('APPLES, oranges');
+  });
 });
 
-test('Function "unslugify" transforms "slugified" YAML filenames to readable format', () => {
-  const slugs = ['monokai_pro.yml', 'terminal.app.yml', 'walton-lincoln_dark.yaml', 'breeze.yaml'];
-  const transformed = slugs.map(unslugify);
+describe('Function "unslugify"', () => {
+  test('Transforms "slugified" YAML filenames to readable format', () => {
+    const slugs = ['monokai_pro.yml', 'terminal.app.yml', 'walton-lincoln_dark.yaml', 'breeze.yaml'];
+    const transformed = slugs.map(unslugify);
 
-  expect(transformed).toEqual(['Monokai Pro', 'Terminal.app', 'Walton-lincoln Dark', 'Breeze']);
+    expect(transformed).toEqual(['Monokai Pro', 'Terminal.app', 'Walton-lincoln Dark', 'Breeze']);
+  });
 });
 
-test('Function "loadThemes" lists all YAML files in a directory sorted', async () => {
-  const files = await loadThemes('themes');
+describe('Function "loadThemes"', () => {
+  test('Lists all YAML files in a directory sorted', async () => {
+    const files = await loadThemes('themes');
 
-  expect(files).toEqual([
-    {
-      path: expect.stringMatching(/breeze\.yaml$/),
-      stats: expect.anything(),
-    },
-    {
-      path: expect.stringMatching(/deep_one\.yaml$/),
-      stats: expect.anything(),
-    },
-    {
-      path: expect.stringMatching(/monokai_pro\.yml$/),
-      stats: expect.anything(),
-    },
-  ]);
+    expect(files).toEqual([
+      {
+        path: expect.stringMatching(/breeze\.yaml$/),
+        stats: expect.anything(),
+      },
+      {
+        path: expect.stringMatching(/deep_one\.yaml$/),
+        stats: expect.anything(),
+      },
+      {
+        path: expect.stringMatching(/monokai_pro\.yml$/),
+        stats: expect.anything(),
+      },
+    ]);
+  });
 });
 
 describe('Function "readYaml"', () => {
