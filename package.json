@@ -36,11 +36,12 @@
     "configuration"
   ],
   "scripts": {
-    "start": "npm run format && npm run lint && jest --watch",
-    "test": "jest",
+    "start": "run-p pretest \"test:unit -- --watch\"",
     "format": "prettier --write \"src/**/*.js\" \"__tests__/**/*.js\"",
     "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
-    "prepublish": "npm run format && npm run lint && npm run test"
+    "pretest": "run-p format lint",
+    "test": "run-p pretest test:unit",
+    "test:unit": "jest"
   },
   "dependencies": {
     "chalk": "^4.1.0",
@@ -55,6 +56,7 @@
   "devDependencies": {
     "eslint": "^7.7.0",
     "mock-fs": "^4.13.0",
+    "npm-run-all": "^4.1.5",
     "prettier": "^2.0.5"
   }
 }
