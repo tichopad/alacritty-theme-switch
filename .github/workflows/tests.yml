@@ -8,7 +8,6 @@ on:
     branches: [master]
     paths-ignore:
       - '**.md'
-
   pull_request:
     branches: [master]
     paths-ignore:
@@ -18,22 +17,17 @@ jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [10.x, 12.x, 14.x]
-
     steps:
       - name: Begin CI
         uses: actions/checkout@v2
-
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-
       - name: Clean install
         run: npm ci
-
       - name: Lint, formatting and test
         run: npm test
