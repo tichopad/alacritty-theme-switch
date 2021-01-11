@@ -9,7 +9,7 @@ See `alacritty-theme-switch --help` for basic information.
 The CLI utility allows to save multiple Alacritty configuration files, which can contain only a subset of Alacritty
 configuration options (e.g. colors, fonts) inside a directory. The intended usage is dynamically switching between multiple color themes (hence the name), but it can be used with any configuration options.
 
-Executing `alacritty-switch-theme` then shows a list of
+Executing `alacritty-theme-switch` then shows a list of
 all these files and allows you to select one. The selected configuration is then merged with the main Alacritty
 configuration file and saved.
 
