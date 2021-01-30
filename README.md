@@ -1,4 +1,4 @@
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/tichopad/alacritty-theme-switch/Tests?label=tests) ![David](https://img.shields.io/david/tichopad/alacritty-theme-switch) ![npm](https://img.shields.io/npm/v/alacritty-theme-switch) ![node-lts](https://img.shields.io/node/v-lts/alacritty-theme-switch)
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/tichopad/alacritty-theme-switch/Tests?label=tests) ![David](https://img.shields.io/david/tichopad/alacritty-theme-switch) [![npm](https://img.shields.io/npm/v/alacritty-theme-switch)](https://www.npmjs.com/package/alacritty-theme-switch) ![node-lts](https://img.shields.io/node/v-lts/alacritty-theme-switch)
 
 # alacritty-theme-switch
 
