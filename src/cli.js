@@ -14,7 +14,7 @@ const success = text => console.log(chalk.bold.green(text + '\n'));
 const cli = meow(
   `
     Usage
-      $ alacritty-switch-theme <options>
+      $ alacritty-theme-switch <options>
 
       By default, this utility will look for the alacritty's configuration file in
       "$HOME/.config/alacritty/alacritty.yml", for the theme files in "$HOME/.config/alacritty/themes" and will try to
@@ -28,10 +28,10 @@ const cli = meow(
       --select, -s Use a theme file instead of showing the prompt (path is relative to the themes' directory)
 
     Examples
-      $ alacritty-switch-theme --config ~/.config/alacritty/alacritty.yml
-      $ alacritty-switch-theme --themes ~/alacritty-themes
-      $ alacritty-switch-theme --backup ~/backup/alacritty.backup.yml
-      $ alacritty-switch-theme --select monokai.yml
+      $ alacritty-theme-switch --config ~/.config/alacritty/alacritty.yml
+      $ alacritty-theme-switch --themes ~/alacritty-themes
+      $ alacritty-theme-switch --backup ~/backup/alacritty.backup.yml
+      $ alacritty-theme-switch --select monokai.yml
 `,
   {
     flags: {
