@@ -26,7 +26,7 @@ async function applyTheme(themePath, rootConfigPath) {
   const config = await readYaml(rootConfigPath);
   const theme = await readYaml(themePath);
   const merged = deepmerge(config, theme);
-  const mergedConfig = yaml.safeDump(merged);
+  const mergedConfig = yaml.dump(merged);
 
   await fs.writeFile(rootConfigPath, mergedConfig);
 }
@@ -58,7 +58,7 @@ async function readYaml(filePath) {
 
   const yamlFile = await fs.readFile(filePath, { encoding: 'utf-8' });
 
-  return yaml.safeLoad(yamlFile);
+  return yaml.load(yamlFile);
 }
 
 /**
