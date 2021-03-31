@@ -43,7 +43,8 @@
     "fix:lint": "npm run lint -- --fix",
     "format": "prettier \"src/**/*.js\" \"__tests__/**/*.js\"",
     "lint": "eslint \"src/**/*.js\" \"__tests__/**/*.js\"",
-    "precommit": "run-p fix:* test:unit"
+    "precommit": "run-p fix:* test:unit",
+    "prepare": "husky install"
   },
   "dependencies": {
     "chalk": "^4.1.0",
