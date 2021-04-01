@@ -12,10 +12,14 @@
     {
       "name": "Guilherme Henrique",
       "email": "gjhenrique@gmail.com"
+    },
+    {
+      "name": "Knosence",
+      "email": "nadario.seays@gmail.com"
     }
   ],
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=12.0.0"
   },
   "repository": {
     "type": "git",
