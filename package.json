@@ -3,7 +3,10 @@
   "version": "1.1.10",
   "description": "CLI for Alacritty color theme and configuration switching.",
   "main": "./src/index.js",
-  "bin": "./src/cli.js",
+  "bin": {
+    "alacritty-theme-switch": "./src/cli.js",
+    "ats": "./src/cli.js"
+  },
   "author": {
     "name": "Michael Tichopád",
     "email": "michael@tichopad.dev"
@@ -51,9 +54,9 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "chalk": "^4.1.0",
     "deepmerge": "^4.2.2",
     "fs-extra": "^9.0.1",
+    "chalk": "^4.1.0",
     "inquirer": "^8.0.0",
     "js-yaml": "^4.0.0",
     "klaw-sync": "^6.0.0",

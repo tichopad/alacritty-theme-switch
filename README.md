@@ -103,7 +103,7 @@ colors:
     white:      '0xF9F8F5'
 ```
 
-## 3) Run `alacritty-theme-switch`
+## 3) Run `alacritty-theme-switch` or `ats`
 
 ## 4) Select theme and hit Enter
 

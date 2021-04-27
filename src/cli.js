@@ -15,6 +15,7 @@ const cli = meow(
   `
     Usage
       $ alacritty-theme-switch <options>
+      $ ats <options>
 
       By default, this utility will look for the alacritty's configuration file in
       "$HOME/.config/alacritty/alacritty.yml", for the theme files in "$HOME/.config/alacritty/themes" and will try to
