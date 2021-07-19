@@ -59,7 +59,7 @@
     "inquirer": "^8.0.0",
     "js-yaml": "^4.0.0",
     "klaw-sync": "^6.0.0",
-    "meow": "^9.0.0"
+    "meow": "^10.1.0"
   },
   "devDependencies": {
     "eslint": "^7.7.0",
