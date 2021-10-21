@@ -62,7 +62,7 @@
     "meow": "^9.0.0"
   },
   "devDependencies": {
-    "eslint": "^7.7.0",
+    "eslint": "^8.0.1",
     "husky": "^7.0.1",
     "jest": "^27.0.5",
     "mock-fs": "^5.0.0",
