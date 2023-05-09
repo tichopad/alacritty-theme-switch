@@ -123,6 +123,7 @@ const cli = meow(
         name: 'theme',
         message: 'Select Alacritty color theme:',
         choices: themesChoices,
+        default: lastSelected,
         pageSize: 25,
       },
     ];
