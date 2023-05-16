@@ -6,9 +6,15 @@
     "name": "Michael Tichopád",
     "email": "michael@tichopad.dev"
   },
-  "packageManager": "pnpm@8.4.0",
+  "packageManager": "pnpm@8.5.1",
   "engines": {
     "node": ">=16.0.0"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "rome check src",
+    "test": "vitest"
   },
   "repository": {
     "type": "git",
@@ -27,5 +33,12 @@
     "alacritty",
     "theme",
     "configuration"
-  ]
+  ],
+  "devDependencies": {
+    "@total-typescript/ts-reset": "0.4.2",
+    "@types/node": "20.1.7",
+    "rome": "12.1.0",
+    "typescript": "5.0.4",
+    "vitest": "0.31.0"
+  }
 }

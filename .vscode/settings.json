@@ -1,0 +1,5 @@
+{
+  "editor.defaultFormatter": "rome.rome",
+  "editor.formatOnSave": true,
+  "typescript.preferences.importModuleSpecifierEnding": "js"
+}
