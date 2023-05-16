@@ -1,3 +1,5 @@
-export function add(a: number, b: number): number {
-  return a + b;
+import { parse } from "yaml";
+
+export function parseYaml(yamlString: string) {
+  return parse(yamlString);
 }

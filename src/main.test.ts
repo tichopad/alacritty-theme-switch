@@ -1,6 +1,20 @@
 import { expect, it } from "vitest";
-import { add } from "./main.js";
+import { parseYaml } from "./main.js";
 
-it("should pass", () => {
-  expect(add(1, 2)).toBe(3);
+const EXAMPLE_YAML = `
+#This is an example YAML file
+name: John
+age: 30
+cars:
+  - Ford #Commented
+  - BMW
+  - Fiat
+`;
+
+it("should parse YAML", () => {
+  expect(parseYaml(EXAMPLE_YAML)).toEqual({
+    name: "John",
+    age: 30,
+    cars: ["Ford", "BMW", "Fiat"],
+  });
 });
