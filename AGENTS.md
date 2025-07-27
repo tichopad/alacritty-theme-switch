@@ -53,6 +53,7 @@
 - NEVER use "git commit" or "git push" without the user explicitly telling you to
 - Always ask for explicit confirmation before committing or pushing changes
 - Never assume the user wants to commit or push changes
+- NEVER create pull requests without the user explicitly telling you to
 
 ### Git commit message format
 
