@@ -30,14 +30,14 @@ inside your terminal.
 The utility can be configured by passing additional flags/parameters:
 
 1. `--config` or `-c` Path to the alacritty's configuration file
-   - E.g.: `alacritty-switch-theme --config ~/.config/alacritty/alacritty.yml`
-   - Default: `$HOME/.config/alacritty/alacritty.yml`
+   - E.g.: `alacritty-switch-theme --config ~/.config/alacritty/alacritty.toml`
+   - Default: `$HOME/.config/alacritty/alacritty.toml`
 2. `--themes` or `-t` Path to the directory containing custom themes' files
    - E.g.: `alacritty-switch-theme --themes ~/alacritty-themes`
    - Default: `$HOME/.config/alacritty/themes`
 3. `--backup` or `-b` Path to the alacritty's configuration file backup made before every switch
-   - E.g.: `alacritty-switch-theme --backup ~/backup/alacritty.backup.yml`
-   - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.yml`
+   - E.g.: `alacritty-switch-theme --backup ~/backup/alacritty.backup.toml`
+   - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.toml`
 4. `--select` or `-s` Path (relative to themes' directory) to a single configuration file that should be used directly instead of prompting a select
 
 # Usage
@@ -57,7 +57,7 @@ Example:
 
 ## 2) Add color theme file
 
-Create new YAML file in your color themes directory.
+Create new TOML file in your color themes directory.
 
 Write your color theme configuration to the file or copy/paste anything from the [official repository themes list](https://github.com/alacritty/alacritty/wiki/Color-schemes).
 
@@ -73,34 +73,32 @@ Example:
 │       └── monokai.yml
 ```
 
-_monokai.yml:_
+_monokai.toml:_
 
 ```
-colors:
+[colors.primary]
+background = '0x272822'
+foreground = '0xF8F8F2'
 
-  primary:
-    background: '0x272822'
-    foreground: '0xF8F8F2'
+[colors.normal]
+black = '0x272822'
+red = '0xF92672'
+green = '0xA6E22E'
+yellow = '0xF4BF75'
+blue = '0x66D9EF'
+magenta = '0xAE81FF'
+cyan = '0xA1EFE4'
+white = '0xF8F8F2'
 
-  normal:
-    black:      '0x272822'
-    red:        '0xF92672'
-    green:      '0xA6E22E'
-    yellow:     '0xF4BF75'
-    blue:       '0x66D9EF'
-    magenta:    '0xAE81FF'
-    cyan:       '0xA1EFE4'
-    white:      '0xF8F8F2'
-
-  bright:
-    black:      '0x75715E'
-    red:        '0xF92672'
-    green:      '0xA6E22E'
-    yellow:     '0xF4BF75'
-    blue:       '0x66D9EF'
-    magenta:    '0xAE81FF'
-    cyan:       '0xA1EFE4'
-    white:      '0xF9F8F5'
+[colors.bright]
+black = '0x75715E'
+red = '0xF92672'
+green = '0xA6E22E'
+yellow = '0xF4BF75'
+blue = '0x66D9EF'
+magenta = '0xAE81FF'
+cyan = '0xA1EFE4'
+white = '0xF9F8F5'
 ```
 
 ## 3) Run `alacritty-theme-switch` or `ats`

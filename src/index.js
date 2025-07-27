@@ -1,19 +1,19 @@
 'use strict';
-const yaml = require('js-yaml');
+const toml = require('smol-toml');
 const fs = require('fs-extra');
 const klaw = require('klaw-sync');
 const path = require('path');
 const deepmerge = require('deepmerge');
 
 /**
- * Checks if given file is a YAML by it's extension.
+ * Checks if given file is a TOML by it's extension.
  * @param {String} filePath Absolute or relative file path
  * @returns {Boolean}
  */
-function isYaml(filePath) {
+function isToml(filePath) {
   const extension = path.extname(filePath);
 
-  return ['.yml', '.yaml'].includes(extension);
+  return extension === '.toml';
 }
 
 /**
@@ -23,10 +23,10 @@ function isYaml(filePath) {
  * @returns {Promise<void>}
  */
 async function applyTheme(themePath, rootConfigPath) {
-  const config = await readYaml(rootConfigPath);
-  const theme = await readYaml(themePath);
+  const config = await readToml(rootConfigPath);
+  const theme = await readToml(themePath);
   const merged = deepmerge(config, theme);
-  const mergedConfig = yaml.dump(merged);
+  const mergedConfig = toml.stringify(merged);
 
   await fs.writeFile(rootConfigPath, mergedConfig);
 }
@@ -40,25 +40,25 @@ async function loadThemes(directoryPath) {
   await fs.ensureDir(directoryPath);
   const themeFiles = klaw(directoryPath, {
     nodir: true,
-    filter: item => isYaml(item.path),
+    filter: item => isToml(item.path),
   });
 
   return themeFiles;
 }
 
 /**
- * Read YAML file and load it as an object.
- * @param {String} filePath YAML file path
+ * Read TOML file and load it as an object.
+ * @param {String} filePath TOML file path
  * @returns {Promise<Object>}
  */
-async function readYaml(filePath) {
-  if (isYaml(filePath) === false) {
-    throw new Error(`Given file ${filePath} is not a YAML.`);
+async function readToml(filePath) {
+  if (isToml(filePath) === false) {
+    throw new Error(`Given file ${filePath} is not a TOML.`);
   }
 
-  const yamlFile = await fs.readFile(filePath, { encoding: 'utf-8' });
+  const tomlFile = await fs.readFile(filePath, { encoding: 'utf-8' });
 
-  return yaml.load(yamlFile);
+  return toml.parse(tomlFile);
 }
 
 /**
@@ -68,7 +68,7 @@ async function readYaml(filePath) {
  */
 function unslugify(text) {
   const withoutUnderscore = text => text.replace(/_+/g, ' ');
-  const withoutExtension = text => text.replace(/\.yml|\.yaml/, '');
+  const withoutExtension = text => text.replace(/\.toml/, '');
   const withProperCase = text => text.replace(/\w\S*/g, s => s.charAt(0).toUpperCase() + s.substr(1).toLowerCase());
 
   return pipe(text)(withoutUnderscore, withoutExtension, withProperCase);
@@ -103,9 +103,9 @@ function useSaveSelectedTheme(saveFile) {
 module.exports = {
   loadThemes,
   applyTheme,
-  readYaml,
+  readToml,
   unslugify,
   pipe,
   useSaveSelectedTheme,
-  isYaml,
+  isToml,
 };

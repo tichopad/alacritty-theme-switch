@@ -9,7 +9,7 @@
 **Main Features**:
 
 - Interactive theme selection via command-line interface
-- YAML configuration file management
+- TOML configuration file management
 - Automatic backup of original configuration before applying changes
 - Support for partial configuration files (themes can contain only color settings, fonts, etc.)
 - Last selected theme tracking
@@ -49,7 +49,7 @@ alacritty-theme-switch/
 
 - **meow**: CLI app helper for parsing command-line arguments
 - **inquirer**: Interactive command-line prompts
-- **js-yaml**: YAML parser and serializer
+- **smol-toml**: TOML parser and serializer
 - **fs-extra**: File system operations
 - **klaw-sync**: File system walker
 - **deepmerge**: Deep merging of JavaScript objects
@@ -153,4 +153,4 @@ alacritty-theme-switch/
   - `--backup/-b`: Backup file path
   - `--select/-s`: Direct theme selection
 
-The application is designed as a simple, single-purpose CLI tool that integrates with Alacritty's YAML-based configuration system to provide an easy way to switch between different terminal themes.
+The application is designed as a simple, single-purpose CLI tool that integrates with Alacritty's TOML-based configuration system to provide an easy way to switch between different terminal themes.

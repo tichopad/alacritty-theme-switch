@@ -6,7 +6,7 @@ const meow = require('meow');
 const path = require('path');
 const inquirer = require('inquirer');
 const process = require('process');
-const { loadThemes, applyTheme, unslugify, useSaveSelectedTheme, isYaml } = require('./index');
+const { loadThemes, applyTheme, unslugify, useSaveSelectedTheme, isToml } = require('./index');
 const home = require('os').homedir();
 const error = text => console.log(chalk.red(text + '\n'));
 const success = text => console.log(chalk.bold.green(text + '\n'));
@@ -18,8 +18,8 @@ const cli = meow(
       $ ats <options>
 
       By default, this utility will look for the alacritty's configuration file in
-      "$HOME/.config/alacritty/alacritty.yml", for the theme files in "$HOME/.config/alacritty/themes" and will try to
-      create a backup of alacritty's configuration file at "$HOME/.config/alacritty/alacritty.backup.yml".
+      "$HOME/.config/alacritty/alacritty.toml", for the theme files in "$HOME/.config/alacritty/themes" and will try to
+      create a backup of alacritty's configuration file at "$HOME/.config/alacritty/alacritty.backup.toml".
       These paths can be changed via options.
 
     Options
@@ -29,17 +29,17 @@ const cli = meow(
       --select, -s Use a theme file instead of showing the prompt (path is relative to the themes' directory)
 
     Examples
-      $ alacritty-theme-switch --config ~/.config/alacritty/alacritty.yml
+      $ alacritty-theme-switch --config ~/.config/alacritty/alacritty.toml
       $ alacritty-theme-switch --themes ~/alacritty-themes
-      $ alacritty-theme-switch --backup ~/backup/alacritty.backup.yml
-      $ alacritty-theme-switch --select monokai.yml
+      $ alacritty-theme-switch --backup ~/backup/alacritty.backup.toml
+      $ alacritty-theme-switch --select monokai.toml
 `,
   {
     flags: {
       config: {
         type: 'string',
         alias: 'c',
-        default: `${home}/.config/alacritty/alacritty.yml`,
+        default: `${home}/.config/alacritty/alacritty.toml`,
       },
       themes: {
         type: 'string',
@@ -49,7 +49,7 @@ const cli = meow(
       backup: {
         type: 'string',
         alias: 'b',
-        default: `${home}/.config/alacritty/alacritty.theme-switch-backup.yml`,
+        default: `${home}/.config/alacritty/alacritty.theme-switch-backup.toml`,
       },
       select: {
         type: 'string',
@@ -69,9 +69,9 @@ const cli = meow(
     if (configStat.isFile() === false) {
       throw new Error(`Configuration ${cli.flags.config} is not a file.`);
     }
-    // Check if configuration is in YAML format
-    if (isYaml(cli.flags.config) === false) {
-      throw new Error(`Configuration file ${cli.flags.config} is not a YAML file.`);
+    // Check if configuration is in TOML format
+    if (isToml(cli.flags.config) === false) {
+      throw new Error(`Configuration file ${cli.flags.config} is not a TOML file.`);
     }
     // Check if given theme directory exists and it's really a directory
     const themesStat = await fs.stat(cli.flags.themes);
