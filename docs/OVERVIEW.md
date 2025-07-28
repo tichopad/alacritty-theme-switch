@@ -63,7 +63,7 @@ alacritty-theme-switch/
 - **Husky**: Git hooks
 - **npm-run-all**: CLI command execution
 
-**Node.js Engine**: >=12.0.0
+**Node.js Engine**: >=22
 
 ## 4. Development Workflow
 
@@ -93,7 +93,7 @@ alacritty-theme-switch/
 
 - GitHub Actions for testing on push/pull request
 - Automated NPM publishing on release creation
-- Tests run on Node.js 12.x and 14.x
+- Tests run on Node.js 22.x
 
 **Dependency Management**:
 
@@ -114,7 +114,7 @@ alacritty-theme-switch/
 - Defines project metadata, dependencies, and scripts
 - Entry points for CLI commands (`alacritty-theme-switch` and `ats`)
 - Development scripts for testing, linting, and formatting
-- Engine requirements (Node.js >=12.0.0)
+- Engine requirements (Node.js >=22)
 
 **.eslintrc**:
 
