@@ -1,7 +1,7 @@
 {
   "name": "alacritty-theme-switch",
   "version": "1.2.0",
-  "description": "CLI for Alacritty color theme and configuration switching.",
+  "description": "CLI for Alacritty color theme and configuration switching (TOML format).",
   "main": "./src/index.js",
   "bin": {
     "alacritty-theme-switch": "./src/cli.js",
@@ -19,10 +19,14 @@
     {
       "name": "Knosence",
       "email": "nadario.seays@gmail.com"
+    },
+    {
+      "name": "Kristjan Komloši",
+      "email": "kristjan.komlosi@gmail.com"
     }
   ],
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=22"
   },
   "repository": {
     "type": "git",
@@ -57,9 +61,9 @@
     "deepmerge": "^4.2.2",
     "fs-extra": "^10.0.0",
     "inquirer": "^8.0.0",
-    "js-yaml": "^4.0.0",
     "klaw-sync": "^6.0.0",
-    "meow": "^9.0.0"
+    "meow": "^9.0.0",
+    "smol-toml": "^1.4.1"
   },
   "devDependencies": {
     "eslint": "^8.0.1",

@@ -1,40 +1,36 @@
 const fs = require('fs-extra');
 const mockFs = require('mock-fs');
-const { pipe, unslugify, readYaml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../src/index');
+const { pipe, unslugify, readToml, loadThemes, applyTheme, useSaveSelectedTheme } = require('../src/index');
 
 beforeEach(() => {
   mockFs({
-    'alacritty.yml': `
-      colors:
-        primary:
-          background: '0x111111'
-          foreground: '0x222222'
-      font:
-        normal:
-          style: Regular
+    'alacritty.toml': `
+[colors.primary]
+background = '0x111111'
+foreground = '0x222222'
+
+[font.normal]
+style = 'Regular'
     `,
     themes: {
-      'monokai_pro.yml': `
-        colors:
-          primary:
-            background: '0x333333'
-            foreground: '0x444444'
+      'monokai_pro.toml': `
+[colors.primary]
+background = '0x333333'
+foreground = '0x444444'
       `,
-      'breeze.yaml': `
-        colors:
-          primary:
-            background: '0x555555'
-            foreground: '0x666666'
+      'breeze.toml': `
+[colors.primary]
+background = '0x555555'
+foreground = '0x666666'
       `,
-      'deep_one.yaml': `
-        colors:
-          primary:
-            background: '0x777777'
+      'deep_one.toml': `
+[colors.primary]
+background = '0x777777'
       `,
-      'not_a_yaml.json': `
-        {
-          hello: "There!"
-        }
+      'not_a_toml.json': `
+{
+  "hello": "There!"
+}
       `,
     },
   });
@@ -59,8 +55,8 @@ describe('Function "pipe"', () => {
 });
 
 describe('Function "unslugify"', () => {
-  test('Transforms "slugified" YAML filenames to readable format', () => {
-    const slugs = ['monokai_pro.yml', 'terminal.app.yml', 'walton-lincoln_dark.yaml', 'breeze.yaml'];
+  test('Transforms "slugified" TOML filenames to readable format', () => {
+    const slugs = ['monokai_pro.toml', 'terminal.app.toml', 'walton-lincoln_dark.toml', 'breeze.toml'];
     const transformed = slugs.map(unslugify);
 
     expect(transformed).toEqual(['Monokai Pro', 'Terminal.app', 'Walton-lincoln Dark', 'Breeze']);
@@ -68,31 +64,31 @@ describe('Function "unslugify"', () => {
 });
 
 describe('Function "loadThemes"', () => {
-  test('Lists all YAML files in a directory sorted', async () => {
+  test('Lists all TOML files in a directory sorted', async () => {
     const files = await loadThemes('themes');
 
     expect(files).toEqual([
       {
-        path: expect.stringMatching(/breeze\.yaml$/),
+        path: expect.stringMatching(/breeze\.toml$/),
         stats: expect.anything(),
       },
       {
-        path: expect.stringMatching(/deep_one\.yaml$/),
+        path: expect.stringMatching(/deep_one\.toml$/),
         stats: expect.anything(),
       },
       {
-        path: expect.stringMatching(/monokai_pro\.yml$/),
+        path: expect.stringMatching(/monokai_pro\.toml$/),
         stats: expect.anything(),
       },
     ]);
   });
 });
 
-describe('Function "readYaml"', () => {
-  test('Loads YAML file as an object', async () => {
-    const yaml = await readYaml('themes/monokai_pro.yml');
+describe('Function "readToml"', () => {
+  test('Loads TOML file as an object', async () => {
+    const toml = await readToml('themes/monokai_pro.toml');
 
-    expect(yaml).toEqual({
+    expect(toml).toEqual({
       colors: {
         primary: {
           background: '0x333333',
@@ -101,17 +97,17 @@ describe('Function "readYaml"', () => {
       },
     });
   });
-  test('Throws when passed file is not a YAML', async () => {
-    expect(readYaml('themes/not_a_yaml.txt')).rejects.toBeInstanceOf(Error);
+  test('Throws when passed file is not a TOML', async () => {
+    expect(readToml('themes/not_a_toml.txt')).rejects.toBeInstanceOf(Error);
   });
 });
 
 describe('Function "applyTheme"', () => {
   test('Merges given config file with root config file', async () => {
-    await applyTheme('themes/monokai_pro.yml', 'alacritty.yml');
-    const yaml = await readYaml('alacritty.yml');
+    await applyTheme('themes/monokai_pro.toml', 'alacritty.toml');
+    const toml = await readToml('alacritty.toml');
 
-    expect(yaml).toEqual({
+    expect(toml).toEqual({
       colors: {
         primary: {
           background: '0x333333',
@@ -126,10 +122,10 @@ describe('Function "applyTheme"', () => {
     });
   });
   test('Merges given config file deeply', async () => {
-    await applyTheme('themes/deep_one.yaml', 'alacritty.yml');
-    const yaml = await readYaml('alacritty.yml');
+    await applyTheme('themes/deep_one.toml', 'alacritty.toml');
+    const toml = await readToml('alacritty.toml');
 
-    expect(yaml).toEqual({
+    expect(toml).toEqual({
       colors: {
         primary: {
           background: '0x777777',
@@ -148,12 +144,12 @@ describe('Function "applyTheme"', () => {
 describe('Function "useSaveSelectedTheme"', () => {
   test('Saves and loads savefile correctly', async () => {
     const savefile = useSaveSelectedTheme('.selected_theme');
-    await savefile.saveSelected('themes/monokai_pro.yml');
+    await savefile.saveSelected('themes/monokai_pro.toml');
     const savefileExists = await fs.pathExists('.selected_theme');
     const savedData = await savefile.getSelected();
 
     expect(savefileExists).toBe(true);
-    expect(savedData).toBe('themes/monokai_pro.yml');
+    expect(savedData).toBe('themes/monokai_pro.toml');
   });
   test('Returns null if the savefile does not exist', async () => {
     const savefile = useSaveSelectedTheme('.selected_theme');
