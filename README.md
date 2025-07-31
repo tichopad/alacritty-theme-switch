@@ -1,15 +1,13 @@
-![GitHub Workflow Status](https://img.shields.io/github/workflow/status/tichopad/alacritty-theme-switch/Tests?label=tests) ![David](https://img.shields.io/david/tichopad/alacritty-theme-switch) [![npm](https://img.shields.io/npm/v/alacritty-theme-switch)](https://www.npmjs.com/package/alacritty-theme-switch) ![node-lts](https://img.shields.io/node/v-lts/alacritty-theme-switch)
-
 # alacritty-theme-switch
 
 > CLI utility for [Alacritty](https://github.com/jwilm/alacritty) color theme and configuration switching
 
-See `alacritty-theme-switch --help` for basic information.
+See `ats --help` for basic information.
 
 The CLI utility allows to save multiple Alacritty configuration files, which can contain only a subset of Alacritty
 configuration options (e.g. colors, fonts) inside a directory. The intended usage is dynamically switching between multiple color themes (hence the name), but it can be used with any configuration options.
 
-Executing `alacritty-theme-switch` then shows a list of
+Executing `ats` then shows a list of
 all these files and allows you to select one. The selected configuration is then merged with the main Alacritty
 configuration file and saved.
 
@@ -21,7 +19,7 @@ The main configuration file is backed up before every merge.
 
 Run
 
-`npm install -g alacritty-theme-switch`
+`npm i -g alacritty-theme-switch@latest`
 
 inside your terminal.
 
@@ -30,13 +28,13 @@ inside your terminal.
 The utility can be configured by passing additional flags/parameters:
 
 1. `--config` or `-c` Path to the alacritty's configuration file
-   - E.g.: `alacritty-switch-theme --config ~/.config/alacritty/alacritty.toml`
+   - E.g.: `ats --config ~/.config/alacritty/alacritty.toml`
    - Default: `$HOME/.config/alacritty/alacritty.toml`
 2. `--themes` or `-t` Path to the directory containing custom themes' files
-   - E.g.: `alacritty-switch-theme --themes ~/alacritty-themes`
+   - E.g.: `ats --themes ~/alacritty-themes`
    - Default: `$HOME/.config/alacritty/themes`
 3. `--backup` or `-b` Path to the alacritty's configuration file backup made before every switch
-   - E.g.: `alacritty-switch-theme --backup ~/backup/alacritty.backup.toml`
+   - E.g.: `ats --backup ~/backup/alacritty.backup.toml`
    - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.toml`
 4. `--select` or `-s` Path (relative to themes' directory) to a single configuration file that should be used directly instead of prompting a select
 
