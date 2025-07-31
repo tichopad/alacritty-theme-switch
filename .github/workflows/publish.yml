@@ -3,6 +3,12 @@ name: Publish
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish (leave empty to use latest tag)'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -24,6 +30,9 @@ jobs:
     name: Publish
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Begin CI
         uses: actions/checkout@v4
@@ -34,15 +43,27 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org/
-      - name: Clean install
-        run: npm ci
+      - name: Get tag name
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            # Get the latest tag
+            latest_tag=$(git describe --tags --abbrev=0)
+            echo "tag=$latest_tag" >> $GITHUB_OUTPUT
+          fi
       - name: Bump version
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          npm version ${{ github.event.release.tag_name }} -m "Bump version to %s"
+          npm version ${{ steps.get_tag.outputs.tag }} -m "Bump version to %s"
           git push
+      - name: Clean install
+        run: npm ci
       - name: Publish to NPM
-        run: npm publish
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
