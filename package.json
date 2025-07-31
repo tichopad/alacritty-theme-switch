@@ -1,6 +1,6 @@
 {
   "name": "alacritty-theme-switch",
-  "version": "2.0.1-beta.1",
+  "version": "2.0.1",
   "description": "CLI for Alacritty color theme and configuration switching (TOML format).",
   "main": "./src/index.js",
   "bin": {
