@@ -1,19 +1,24 @@
 # alacritty-theme-switch
 
-> CLI utility for [Alacritty](https://github.com/jwilm/alacritty) color theme and configuration switching
+> CLI utility for [Alacritty](https://github.com/jwilm/alacritty) color theme
+> and configuration switching
 
 See `ats --help` for basic information.
 
-The CLI utility allows to save multiple Alacritty configuration files, which can contain only a subset of Alacritty
-configuration options (e.g. colors, fonts) inside a directory. The intended usage is dynamically switching between multiple color themes (hence the name), but it can be used with any configuration options.
+The CLI utility allows to save multiple Alacritty configuration files, which can
+contain only a subset of Alacritty configuration options (e.g. colors, fonts)
+inside a directory. The intended usage is dynamically switching between multiple
+color themes (hence the name), but it can be used with any configuration
+options.
 
-Executing `ats` then shows a list of
-all these files and allows you to select one. The selected configuration is then merged with the main Alacritty
+Executing `ats` then shows a list of all these files and allows you to select
+one. The selected configuration is then merged with the main Alacritty
 configuration file and saved.
 
 The main configuration file is backed up before every merge.
 
-**Please note, that all comments inside the main configuration file are removed upon switch.**
+**Please note, that all comments inside the main configuration file are removed
+upon switch.**
 
 # Installation
 
@@ -33,16 +38,19 @@ The utility can be configured by passing additional flags/parameters:
 2. `--themes` or `-t` Path to the directory containing custom themes' files
    - E.g.: `ats --themes ~/alacritty-themes`
    - Default: `$HOME/.config/alacritty/themes`
-3. `--backup` or `-b` Path to the alacritty's configuration file backup made before every switch
+3. `--backup` or `-b` Path to the alacritty's configuration file backup made
+   before every switch
    - E.g.: `ats --backup ~/backup/alacritty.backup.toml`
    - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.toml`
-4. `--select` or `-s` Path (relative to themes' directory) to a single configuration file that should be used directly instead of prompting a select
+4. `--select` or `-s` Path (relative to themes' directory) to a single
+   configuration file that should be used directly instead of prompting a select
 
 # Usage
 
 ## 1) Create folder for your color themes
 
-The folder is in `~/.config/alacritty/themes/` by default, but can be set by using `--themes` parameter.
+The folder is in `~/.config/alacritty/themes/` by default, but can be set by
+using `--themes` parameter.
 
 Example:
 
@@ -57,7 +65,8 @@ Example:
 
 Create new TOML file in your color themes directory.
 
-Write your color theme configuration to the file or copy/paste anything from the [official repository themes list](https://github.com/alacritty/alacritty/wiki/Color-schemes).
+Write your color theme configuration to the file or copy/paste anything from the
+[official repository themes list](https://github.com/alacritty/alacritty/wiki/Color-schemes).
 
 You can add as many files as you want.
 
@@ -112,12 +121,19 @@ white = '0xF9F8F5'
 
 # Last selected theme
 
-After a theme is applied, it's name is saved to a file named `.selected_theme` inside the themes directory. This information is then used to keep track of the last selected theme.
+After a theme is applied, it's name is saved to a file named `.selected_theme`
+inside the themes directory. This information is then used to keep track of the
+last selected theme.
 
-If you manually change the alacritty colors configuration or rename the last selected theme's configuration file, the information will be lost.
+If you manually change the alacritty colors configuration or rename the last
+selected theme's configuration file, the information will be lost.
 
 # OS support
 
-This hasn't been tested on Windows and OS X yet. There'll probably be issues with default settings, as it's looking for the `$HOME/.config/alacritty` folder, but after setting the `--config`, `--themes` and `--backup` flags, it should work just fine.
+This hasn't been tested on Windows and OS X yet. There'll probably be issues
+with default settings, as it's looking for the `$HOME/.config/alacritty` folder,
+but after setting the `--config`, `--themes` and `--backup` flags, it should
+work just fine.
 
-Create an issue or pull request if you want to add out-of-the-box support for your platform of choice.
+Create an issue or pull request if you want to add out-of-the-box support for
+your platform of choice.

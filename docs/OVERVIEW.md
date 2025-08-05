@@ -2,16 +2,21 @@
 
 ## 1. Project Purpose & Functionality
 
-**Purpose**: alacritty-theme-switch is a CLI utility for dynamically switching between multiple color themes and configurations in the Alacritty terminal emulator.
+**Purpose**: alacritty-theme-switch is a CLI utility for dynamically switching
+between multiple color themes and configurations in the Alacritty terminal
+emulator.
 
-**Problem Solved**: Alacritty users can easily switch between different color themes without manually editing configuration files. The tool manages multiple theme configurations and applies them to the main Alacritty configuration file.
+**Problem Solved**: Alacritty users can easily switch between different color
+themes without manually editing configuration files. The tool manages multiple
+theme configurations and applies them to the main Alacritty configuration file.
 
 **Main Features**:
 
 - Interactive theme selection via command-line interface
 - TOML configuration file management
 - Automatic backup of original configuration before applying changes
-- Support for partial configuration files (themes can contain only color settings, fonts, etc.)
+- Support for partial configuration files (themes can contain only color
+  settings, fonts, etc.)
 - Last selected theme tracking
 - Command-line flags for custom configuration paths
 - Support for direct theme selection without interactive prompt
@@ -142,7 +147,8 @@ alacritty-theme-switch/
 **Primary Entry Points**:
 
 1. `src/cli.js` - Main CLI executable (referenced in package.json bin field)
-2. `src/index.js` - Core library functions (referenced in package.json main field)
+2. `src/index.js` - Core library functions (referenced in package.json main
+   field)
 
 **CLI Commands**:
 
@@ -153,4 +159,6 @@ alacritty-theme-switch/
   - `--backup/-b`: Backup file path
   - `--select/-s`: Direct theme selection
 
-The application is designed as a simple, single-purpose CLI tool that integrates with Alacritty's TOML-based configuration system to provide an easy way to switch between different terminal themes.
+The application is designed as a simple, single-purpose CLI tool that integrates
+with Alacritty's TOML-based configuration system to provide an easy way to
+switch between different terminal themes.

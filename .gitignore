@@ -86,6 +86,3 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
-
-# Editor specific configuration
-.vscode/

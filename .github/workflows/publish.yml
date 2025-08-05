@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (leave empty to use latest tag)'
+        description: "Tag to publish (leave empty to use latest tag)"
         required: false
         type: string
       beta:
-        description: 'Publish as beta (npm --tag=beta)'
+        description: "Publish as beta (npm --tag=beta)"
         required: false
         type: boolean
         default: false
