@@ -1,91 +1,48 @@
-import { parseArgs } from "@std/cli/parse-args";
 import { promptSelect } from "@std/cli/unstable-prompt-select";
-import denoJson from "../deno.json" with { type: "json" };
-import {
-  applyTheme,
-  bold,
-  type FilePath,
-  getActiveThemes,
-  validateConfigFile,
-  validateSelectedTheme,
-  validateThemesDirectory,
-} from "./core.ts";
+import { bold, getArgs, printHelp, printVersion, underscore } from "./cli.ts";
+import { createThemeManager } from "./theme-manager.ts";
 
-const homeDir = Deno.env.get("HOME") ?? Deno.cwd();
+const args = getArgs(Deno.args);
 
-const args = parseArgs(Deno.args, {
-  boolean: ["help", "version"],
-  string: ["config", "themes", "backup", "select"],
-  alias: {
-    h: "help",
-    v: "version",
-    c: "config",
-    t: "themes",
-    b: "backup",
-    s: "select",
-  },
-  default: {
-    config: `${homeDir}/.config/alacritty/alacritty.toml`,
-    themes: `${homeDir}/.config/alacritty/themes`,
-    backup: `${homeDir}/.config/alacritty/alacritty.bak.toml`,
-  },
+// Show help and quit
+if (args.help) {
+  printHelp();
+  Deno.exit(0);
+}
+
+// Show version and quit
+if (args.version) {
+  printVersion();
+  Deno.exit(0);
+}
+
+// We're in theme management territory now -> create a manager
+const manager = await createThemeManager({
+  configPath: args.config,
+  themesDirPath: args.themes,
+  backupPath: args.backup,
 });
 
-if (args.help) {
-  console.log("Help");
-  Deno.exit(0);
-}
-
-if (args.version) {
-  console.log(denoJson.version);
-  Deno.exit(0);
-}
-
-console.log(args);
-
-const config = await validateConfigFile(args.config);
-console.log(config);
-const themes = await validateThemesDirectory(args.themes);
-console.log(themes);
-
+// If a theme is selected by a CLI arg, apply it and quit
 if (args.select !== undefined) {
-  const theme = await validateSelectedTheme(args.select, themes);
-  console.log(theme);
+  await manager.applyThemeByFilename(args.select);
 }
 
-const activeThemes = getActiveThemes(config, themes);
-console.log("activeThemes: %o", activeThemes);
-
+// Prompt user to select a theme
 const selectedTheme = promptSelect(
-  `Select Alacritty color theme(s)`,
-  themes.map((t) => {
-    const isActive = activeThemes.has(t.path);
-
+  `Select Alacritty color theme`,
+  manager.listThemes().map((theme) => {
     return ({
-      label: isActive ? bold(t.name) + " (active)" : t.name,
-      value: t,
+      label: theme.isCurrentlyActive
+        ? underscore(bold(theme.label) + " ✨")
+        : theme.label,
+      value: theme,
     });
   }),
-  {
-    // Clear input after selection
-    clear: true,
-    // Max. number of visible items
-    visibleLines: 10,
-  },
 );
-console.log(selectedTheme);
-
 if (selectedTheme === null) {
   console.log("No themes selected. Exiting.");
   Deno.exit(0);
 }
 
-await applyTheme(
-  [selectedTheme.value],
-  themes,
-  args.config as FilePath,
-  config,
-  args.backup as FilePath,
-);
-
-// ----
+await manager.applyTheme(selectedTheme.value);
