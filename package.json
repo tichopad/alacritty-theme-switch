@@ -60,7 +60,7 @@
   "dependencies": {
     "deepmerge": "^4.2.2",
     "fs-extra": "^10.0.0",
-    "inquirer": "^8.0.0",
+    "inquirer": "^12.9.3",
     "klaw-sync": "^6.0.0",
     "meow": "^9.0.0",
     "smol-toml": "^1.4.1"
