@@ -1,6 +1,6 @@
 import { promptSelect } from "@std/cli/unstable-prompt-select";
 import { bold, getArgs, printHelp, printVersion, underscore } from "./cli.ts";
-import { createThemeManager } from "./theme-manager/index.ts";
+import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args);
 
@@ -24,37 +24,32 @@ const managerResult = await createThemeManager({
 }).toResult();
 
 if (managerResult.isErr()) {
-  console.error("Failed to create theme manager");
+  console.error("Failed to create theme manager! ❌");
   console.error(managerResult.error);
   Deno.exit(1);
 }
 
 const manager = managerResult.data;
 
-// If a theme is selected by a CLI arg, apply it and quit
+// If a theme is selected by a CLI arg, apply it  and quit
 if (args.select !== undefined) {
-  const applyResult = await manager.applyThemeByFilename(args.select)
-    .toResult();
-  if (applyResult.isErr()) {
-    console.error("Failed to apply theme");
-    console.error(applyResult.error);
-    Deno.exit(1);
-  }
-  console.log(`Applied theme: ${args.select}`);
-  Deno.exit(0);
+  await manager
+    .applyThemeByFilename(args.select)
+    .match(
+      (appliedTheme) => {
+        console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
+        Deno.exit(0);
+      },
+      (error) => {
+        console.log("Failed to apply theme! ❌");
+        console.error(error);
+        Deno.exit(1);
+      },
+    );
 }
 
-// Get the list of themes
-const themesResult = await manager.listThemes().toResult();
-if (themesResult.isErr()) {
-  console.error("Failed to list themes");
-  console.error(themesResult.error);
-  Deno.exit(1);
-}
-
-const themes = themesResult.data;
-
-// Prompt user to select a theme
+// Else prompt user to select a theme
+const themes = manager.listThemes();
 const selectedTheme = promptSelect(
   `Select Alacritty color theme`,
   themes.map((theme) => {
@@ -66,16 +61,21 @@ const selectedTheme = promptSelect(
     });
   }),
 );
+
 if (selectedTheme === null) {
   console.log("No themes selected. Exiting.");
   Deno.exit(0);
 }
 
-const applyResult = await manager.applyTheme(selectedTheme.value).toResult();
-if (applyResult.isErr()) {
-  console.error("Failed to apply theme");
-  console.error(applyResult.error);
-  Deno.exit(1);
-}
-
-console.log(`Applied theme: ${selectedTheme.value.label}`);
+// And apply it
+await manager.applyTheme(selectedTheme.value).match(
+  (appliedTheme) => {
+    console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
+    Deno.exit(0);
+  },
+  (error) => {
+    console.log("Failed to apply theme! ❌");
+    console.error(error);
+    Deno.exit(1);
+  },
+);

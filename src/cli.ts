@@ -1,11 +1,33 @@
 import { parseArgs } from "@std/cli/parse-args";
 import denoJson from "../deno.json" with { type: "json" };
+import type { FilePath } from "./theme-manager/types.ts";
+
+type Args = {
+  /** Show help */
+  help: boolean;
+  /** Show version */
+  version: boolean;
+  /** Path to the alacritty's configuration file */
+  config: string;
+  /** Path to the directory containing custom themes' files */
+  themes: string;
+  /** Path to the alacritty's configuration file backup made before every switch */
+  backup: string;
+  /**
+   * Path (relative to themes' directory) to a single configuration file that
+   * should be used directly instead of prompting a select
+   */
+  select?: string;
+  /** Positional arguments */
+  _: Array<string | number>;
+  [key: string]: unknown;
+};
 
 /**
  * Parse CLI arguments.
  * @param cliArgs CLI arguments, e.g. returned by Deno.args
  */
-export function getArgs(cliArgs: string[]) {
+export function getArgs(cliArgs: string[]): Args {
   const homeDir = getHomeDir();
 
   return parseArgs(cliArgs, {
@@ -64,14 +86,14 @@ export function printVersion() {
  * Uses $HOME on POSIX systems and $USERPROFILE on Windows.
  * If neither is set, uses current directory and logs a warning.
  */
-function getHomeDir() {
+function getHomeDir(): FilePath {
   const posixHomeDir = Deno.env.get("HOME");
   const windowsHomeDir = Deno.env.get("USERPROFILE");
   let homeDir = posixHomeDir ?? windowsHomeDir;
 
   if (homeDir === undefined) {
     console.warn(
-      "Could not determine home directory. Using current directory.",
+      "Could not determine home directory. Using current directory as the default root.",
     );
     homeDir = Deno.cwd();
   }
@@ -82,13 +104,13 @@ function getHomeDir() {
 /**
  * Make terminal output text bold.
  */
-export function bold(s: string) {
+export function bold(s: string): string {
   return `\x1b[1m${s}\x1b[0m`;
 }
 
 /**
  * Make terminal output text underlined.
  */
-export function underscore(s: string) {
+export function underscore(s: string): string {
   return `\x1b[4m${s}\x1b[0m`;
 }

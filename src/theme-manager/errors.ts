@@ -1,4 +1,6 @@
-// *** Error Classes *** //
+/**
+ * Module for defining custom error types for the theme manager.
+ */
 
 export class BackupError extends Error {
   readonly _tag = "BackupError";
@@ -24,27 +26,6 @@ export class ThemeNotFoundError extends Error {
   constructor(filename: string, options?: ErrorOptions) {
     super(`Given selected theme ${filename} does not exist.`, options);
     this.filename = filename;
-  }
-}
-
-export class ThemeNotFileError extends Error {
-  readonly _tag = "ThemeNotFileError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Given selected theme ${path} is not a file.`, options);
-    this.path = path;
-  }
-}
-
-export class ThemeNotAccessibleError extends Error {
-  readonly _tag = "ThemeNotAccessibleError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(
-      `Given selected theme ${path} does not exist or is not readable.`,
-      options,
-    );
-    this.path = path;
   }
 }
 
@@ -135,8 +116,6 @@ export class FileIsDirectoryError extends Error {
   }
 }
 
-// *** Error Type Definitions *** //
-
 export type ParseConfigError =
   | FileNotFoundError
   | FileNotReadableError
@@ -145,9 +124,8 @@ export type ParseConfigError =
 
 export type CheckThemeExistsError =
   | ThemeNotFoundError
-  | ThemeNotFileError
-  | ThemeNotAccessibleError
-  | ThemeNotTOMLError;
+  | ThemeNotTOMLError
+  | FileNotFoundError;
 
 export type LoadThemesError =
   | DirectoryIsFileError
