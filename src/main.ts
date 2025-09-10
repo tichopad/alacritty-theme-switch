@@ -1,8 +1,15 @@
 import { promptSelect } from "@std/cli/unstable-prompt-select";
-import { bold, getArgs, printHelp, printVersion, underscore } from "./cli.ts";
+import {
+  bold,
+  getArgs,
+  getHomeDir,
+  printHelp,
+  printVersion,
+  underscore,
+} from "./cli.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
-const args = getArgs(Deno.args);
+const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);
 
 // Show help and quit
 if (args.help) {

@@ -1,0 +1,10 @@
+# Basic Alacritty configuration for testing
+
+[general]
+import = []
+
+[font]
+size = 12
+
+[window]
+opacity = 0.9

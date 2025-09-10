@@ -1,0 +1,12 @@
+# Alacritty configuration with existing imports for testing
+
+[general]
+import = ["existing-import.toml", "another-import.toml"]
+
+[font]
+size = 14
+family = "JetBrains Mono"
+
+[window]
+opacity = 0.95
+padding = { x = 10, y = 10 }

@@ -1,4 +1,5 @@
 import { parseArgs } from "@std/cli/parse-args";
+import { join } from "@std/path";
 import denoJson from "../deno.json" with { type: "json" };
 import type { FilePath } from "./theme-manager/types.ts";
 
@@ -27,9 +28,11 @@ type Args = {
  * Parse CLI arguments.
  * @param cliArgs CLI arguments, e.g. returned by Deno.args
  */
-export function getArgs(cliArgs: string[]): Args {
-  const homeDir = getHomeDir();
-
+export function getArgs(
+  cliArgs: string[],
+  homeDir: FilePath,
+  os: typeof Deno.build.os,
+): Args {
   return parseArgs(cliArgs, {
     boolean: ["help", "version"],
     string: ["config", "themes", "backup", "select"],
@@ -42,9 +45,9 @@ export function getArgs(cliArgs: string[]): Args {
       s: "select",
     },
     default: {
-      config: `${homeDir}/.config/alacritty/alacritty.toml`,
-      themes: `${homeDir}/.config/alacritty/themes`,
-      backup: `${homeDir}/.config/alacritty/alacritty.bak.toml`,
+      config: join(getDefaultConfigDir(homeDir, os), "alacritty.toml"),
+      themes: join(getDefaultConfigDir(homeDir, os), "themes"),
+      backup: join(getDefaultConfigDir(homeDir, os), "alacritty.bak.toml"),
     },
   });
 }
@@ -86,10 +89,14 @@ export function printVersion() {
  * Uses $HOME on POSIX systems and $USERPROFILE on Windows.
  * If neither is set, uses current directory and logs a warning.
  */
-function getHomeDir(): FilePath {
-  const posixHomeDir = Deno.env.get("HOME");
-  const windowsHomeDir = Deno.env.get("USERPROFILE");
-  let homeDir = posixHomeDir ?? windowsHomeDir;
+export function getHomeDir(os: typeof Deno.build.os): FilePath {
+  let homeDir: string | undefined;
+
+  if (os === "windows") {
+    homeDir = Deno.env.get("APPDATA") ?? Deno.env.get("USERPROFILE");
+  } else {
+    homeDir = Deno.env.get("HOME") ?? Deno.env.get("XDG_CONFIG_HOME");
+  }
 
   if (homeDir === undefined) {
     console.warn(
@@ -99,6 +106,19 @@ function getHomeDir(): FilePath {
   }
 
   return homeDir;
+}
+
+/**
+ * Get default alacritty configuration path.
+ */
+function getDefaultConfigDir(
+  homeDir: FilePath,
+  os: typeof Deno.build.os,
+): FilePath {
+  if (os === "windows") {
+    return join(homeDir, "alacritty");
+  }
+  return join(homeDir, ".config", "alacritty");
 }
 
 /**

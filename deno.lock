@@ -5,9 +5,11 @@
     "jsr:@std/cli@1.0.21": "1.0.21",
     "jsr:@std/collections@^1.1.1": "1.1.2",
     "jsr:@std/fs@1.0.19": "1.0.19",
+    "jsr:@std/internal@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.6": "1.0.10",
     "jsr:@std/internal@^1.0.9": "1.0.10",
-    "jsr:@std/path@^1.1.1": "1.1.1",
+    "jsr:@std/path@^1.1.1": "1.1.2",
+    "jsr:@std/path@^1.1.2": "1.1.2",
     "jsr:@std/toml@1.0.8": "1.0.8",
     "npm:@types/node@*": "22.15.15"
   },
@@ -28,7 +30,7 @@
       "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06",
       "dependencies": [
         "jsr:@std/internal@^1.0.9",
-        "jsr:@std/path"
+        "jsr:@std/path@^1.1.1"
       ]
     },
     "@std/internal@1.0.10": {
@@ -38,6 +40,12 @@
       "integrity": "fe00026bd3a7e6a27f73709b83c607798be40e20c81dde655ce34052fd82ec76",
       "dependencies": [
         "jsr:@std/internal@^1.0.9"
+      ]
+    },
+    "@std/path@1.1.2": {
+      "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.10"
       ]
     },
     "@std/toml@1.0.8": {
@@ -63,6 +71,7 @@
       "jsr:@std/assert@1.0.13",
       "jsr:@std/cli@1.0.21",
       "jsr:@std/fs@1.0.19",
+      "jsr:@std/path@^1.1.2",
       "jsr:@std/toml@1.0.8"
     ]
   }
