@@ -1,4 +1,4 @@
-import { promptSelect } from "@std/cli/unstable-prompt-select";
+import search from "@inquirer/search";
 import {
   bold,
   getArgs,
@@ -57,25 +57,28 @@ if (args.select !== undefined) {
 
 // Else prompt user to select a theme
 const themes = manager.listThemes();
-const selectedTheme = promptSelect(
-  `Select Alacritty color theme`,
-  themes.map((theme) => {
-    return ({
-      label: theme.isCurrentlyActive
-        ? underscore(bold(theme.label) + " ✨")
-        : theme.label,
-      value: theme,
-    });
-  }),
-);
-
-if (selectedTheme === null) {
-  console.log("No themes selected. Exiting.");
-  Deno.exit(0);
-}
+const selectedTheme = await search({
+  message: "Select Alacritty color theme",
+  source: (input) => {
+    return themes
+      .filter((theme) => {
+        return input
+          ? theme.label.toLowerCase().includes(input.toLowerCase())
+          : true;
+      })
+      .map((theme) => {
+        return {
+          name: theme.isCurrentlyActive
+            ? underscore(bold(theme.label) + " ✨")
+            : theme.label,
+          value: theme,
+        };
+      });
+  },
+});
 
 // And apply it
-await manager.applyTheme(selectedTheme.value).match(
+await manager.applyTheme(selectedTheme).match(
   (appliedTheme) => {
     console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
     Deno.exit(0);
