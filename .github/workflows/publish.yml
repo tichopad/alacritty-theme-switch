@@ -78,7 +78,6 @@ jobs:
           jq '.version = "${{ steps.version_info.outputs.version }}"' deno.json > deno.json.tmp
           mv deno.json.tmp deno.json
           cat deno.json
-          exit 1
           git add deno.json
           git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
           git push
