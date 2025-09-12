@@ -16,90 +16,82 @@ on:
         default: false
 
 jobs:
-  check-and-bump:
-    name: Run checks and bump version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.5.x
-      - name: Run checks
-        run: deno task check
-      - name: Bump deno.json version
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          jq '.version = "${{ inputs.tag }}"' deno.json > deno.json.tmp
-          mv deno.json.tmp deno.json
-          git add deno.json
-          git commit -m "Bump version to ${{ inputs.tag }}"
-          git push
-
-  publish-jsr:
-    name: Publish to JSR
-    needs: check-and-bump
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v5
-      - name: Publish package
-        run: |
-          cat deno.json
-          exit 1
-          npx jsr publish
-
-  publish-npm:
-    name: Publish
-    needs: check-and-bump
+  publish:
+    name: Check, bump version, and publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     steps:
-      - name: Begin CI
+      - name: Checkout repository
         uses: actions/checkout@v5
         with:
-          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
-      - name: Get tag name and determine npm tag
-        id: get_tag
+
+      - name: Run checks
+        run: deno task check
+
+      - name: Determine version and npm tag
+        id: version_info
         run: |
-          # Check if we're on a release
+          # Determine the version to use
           if [ "${{ github.event_name }}" = "release" ]; then
-            # Check if release is a pre-release
+            VERSION="${{ github.event.release.tag_name }}"
+            # Remove 'v' prefix if present
+            VERSION=${VERSION#v}
             if [ "${{ github.event.release.prerelease }}" = "true" ]; then
               echo "npm_tag=beta" >> $GITHUB_OUTPUT
             else
               echo "npm_tag=latest" >> $GITHUB_OUTPUT
             fi
           elif [ -n "${{ inputs.tag }}" ]; then
-            # Check if beta flag is set for manual trigger
+            VERSION="${{ inputs.tag }}"
+            # Remove 'v' prefix if present
+            VERSION=${VERSION#v}
             if [ "${{ inputs.beta }}" = "true" ]; then
               echo "npm_tag=beta" >> $GITHUB_OUTPUT
             else
               echo "npm_tag=latest" >> $GITHUB_OUTPUT
             fi
           else
-            # Default to latest for auto-detected tags
-            echo "npm_tag=latest" >> $GITHUB_OUTPUT
+            echo "Error: No version specified"
+            exit 1
           fi
-      - name: Build Node-compatible package
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+      - name: Bump deno.json version
         run: |
-          ls -a ./npm
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          jq '.version = "${{ steps.version_info.outputs.version }}"' deno.json > deno.json.tmp
+          mv deno.json.tmp deno.json
           cat deno.json
-          echo "${{ steps.get_tag.outputs.npm_tag }}"
           exit 1
-          deno task build-npm
+          git add deno.json
+          git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
+          git push
+
+      - name: Publish to JSR
+        run: npx jsr publish
+
+      - name: Build Node-compatible package
+        run: deno task build-npm
+
       - name: Publish to NPM
-        run: npm publish --provenance --access public --tag=${{ steps.get_tag.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd npm
+          npm publish --provenance --access public --tag=${{ steps.version_info.outputs.npm_tag }}
