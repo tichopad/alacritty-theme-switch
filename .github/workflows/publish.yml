@@ -1,18 +1,105 @@
 name: Publish
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [created]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (leave empty to use latest tag)"
+        required: false
+        type: string
+      beta:
+        description: "Publish as beta (npm --tag=beta)"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  publish:
+  check-and-bump:
+    name: Run checks and bump version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+      - name: Run checks
+        run: deno task check
+      - name: Bump deno.json version
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          jq '.version = "${{ inputs.tag }}"' deno.json > deno.json.tmp
+          mv deno.json.tmp deno.json
+          git add deno.json
+          git commit -m "Bump version to ${{ inputs.tag }}"
+          git push
+
+  publish-jsr:
+    name: Publish to JSR
+    needs: check-and-bump
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Publish package
-        run: npx jsr publish
+        run: |
+          cat deno.json
+          exit 1
+          npx jsr publish
+
+  publish-npm:
+    name: Publish
+    needs: check-and-bump
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Begin CI
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+      - name: Get tag name and determine npm tag
+        id: get_tag
+        run: |
+          # Check if we're on a release
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Check if release is a pre-release
+            if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+              echo "npm_tag=beta" >> $GITHUB_OUTPUT
+            else
+              echo "npm_tag=latest" >> $GITHUB_OUTPUT
+            fi
+          elif [ -n "${{ inputs.tag }}" ]; then
+            # Check if beta flag is set for manual trigger
+            if [ "${{ inputs.beta }}" = "true" ]; then
+              echo "npm_tag=beta" >> $GITHUB_OUTPUT
+            else
+              echo "npm_tag=latest" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Default to latest for auto-detected tags
+            echo "npm_tag=latest" >> $GITHUB_OUTPUT
+          fi
+      - name: Build Node-compatible package
+        run: |
+          ls -a ./npm
+          cat deno.json
+          echo "${{ steps.get_tag.outputs.npm_tag }}"
+          exit 1
+          deno task build-npm
+      - name: Publish to NPM
+        run: npm publish --provenance --access public --tag=${{ steps.get_tag.outputs.npm_tag }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
