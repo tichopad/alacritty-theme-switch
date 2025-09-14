@@ -82,9 +82,6 @@ jobs:
           git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
           git push
 
-      - name: Publish to JSR
-        run: npx jsr publish
-
       - name: Build Node-compatible package
         run: deno task build-npm
 
@@ -94,3 +91,6 @@ jobs:
         run: |
           cd npm
           npm publish --provenance --access public --tag=${{ steps.version_info.outputs.npm_tag }}
+
+      - name: Publish to JSR
+        run: npx jsr publish
