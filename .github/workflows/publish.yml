@@ -17,7 +17,7 @@ on:
 
 jobs:
   publish:
-    name: Check, bump version, and publish
+    name: Publish to NPM and JSR
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,9 +78,9 @@ jobs:
           jq '.version = "${{ steps.version_info.outputs.version }}"' deno.json > deno.json.tmp
           mv deno.json.tmp deno.json
           cat deno.json
-          # git add deno.json
-          # git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
-          # git push
+          git add deno.json
+          git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
+          git push
 
       - name: Build Node-compatible package
         run: deno task build-npm
