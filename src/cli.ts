@@ -1,5 +1,5 @@
 import { parseArgs } from "@std/cli/parse-args";
-import { join } from "@std/path";
+import { join } from "@std/path/join";
 import denoJson from "../deno.json" with { type: "json" };
 import type { FilePath } from "./theme-manager/types.ts";
 

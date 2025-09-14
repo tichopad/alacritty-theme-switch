@@ -23,6 +23,11 @@ await build({
     bugs: {
       url: "https://github.com/tichopad/alacritty-theme-switch/issues",
     },
+    main: "./esm/src/main.js",
+    bin: {
+      "alacritty-theme-switch": "./esm/src/main.js",
+      ats: "./esm/src/main.js",
+    },
   },
   compilerOptions: {
     lib: ["DOM", "ESNext"],
