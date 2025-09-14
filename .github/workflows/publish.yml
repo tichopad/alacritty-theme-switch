@@ -82,7 +82,6 @@ jobs:
           # git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
           # git push
 
-
       - name: Build Node-compatible package
         run: deno task build-npm
 
