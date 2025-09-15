@@ -7,7 +7,8 @@
     "dev": "deno run --allow-write --allow-env --allow-read --watch ./src/main.ts",
     "run": "deno run --allow-write --allow-env --allow-read ./src/main.ts",
     "test": "deno test --allow-write --allow-env --allow-read ./tests/unit",
-    "build-npm": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run scripts/build-npm.ts"
+    "build-npm": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run scripts/build-npm.ts",
+    "build-binary": "deno compile --allow-write --allow-env --allow-read --output=ats ./src/main.ts"
   },
   "exports": "./src/main.ts",
   "imports": {

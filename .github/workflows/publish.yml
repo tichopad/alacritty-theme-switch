@@ -42,6 +42,9 @@ jobs:
       - name: Run checks
         run: deno task check
 
+      - name: Run tests
+        run: deno task test
+
       - name: Determine version and npm tag
         id: version_info
         run: |
