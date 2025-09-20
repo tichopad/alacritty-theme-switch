@@ -35,6 +35,7 @@ await build({
   compilerOptions: {
     lib: ["DOM", "ESNext"],
   },
+  esModule: true,
   async postBuild() {
     // steps to run after building and before running the tests
     await Deno.copyFile("LICENSE.md", "npm/LICENSE.md");
