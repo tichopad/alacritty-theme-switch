@@ -89,3 +89,6 @@ typings/
 
 # NPM build output
 npm/
+
+# Binary output
+bin/

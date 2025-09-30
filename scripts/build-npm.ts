@@ -10,8 +10,7 @@ await build({
     deno: true,
   },
   scriptModule: false,
-  // TODO: Fix the upstream CJS compat and then enable tests
-  test: false,
+  test: true,
   package: {
     // package.json properties
     name: "alacritty-theme-switch",
@@ -45,8 +44,8 @@ await build({
   },
 });
 
+/** Injects shebang to the main CLI file for proper CLI functionality. */
 async function injectShebang(filePath: string) {
-  // Add shebang to the executable file for proper CLI functionality
   const shebang = "#!/usr/bin/env node\n";
 
   try {
