@@ -162,7 +162,7 @@ const config = ResultAsync.fromPromise(Deno.readTextFile(configPath))
 ```typescript
 // Chain validations using flatMap
 function validateTheme(
-  path: string,
+  path: string
 ): ResultAsync<Theme, CheckThemeExistsError> {
   return checkFileExists(path)
     .flatMap(() => checkIsFile(path))
@@ -176,7 +176,7 @@ function validateTheme(
 ```typescript
 // Collect multiple errors when processing lists
 const results = await Promise.all(
-  themePaths.map((path) => validateTheme(path).toResult()),
+  themePaths.map((path) => validateTheme(path).toResult())
 );
 const errors = results.filter((r) => r.isErr()).map((r) => r.error);
 const themes = results.filter((r) => r.isOk()).map((r) => r.data);
@@ -184,3 +184,103 @@ const themes = results.filter((r) => r.isOk()).map((r) => r.data);
 
 Remember: This codebase prioritizes correctness and maintainability over
 brevity. When in doubt, choose the more explicit and type-safe approach.
+
+## Version control
+
+- Always use `git` for version control
+- Unless specified otherwise, assume GitHub is used for repository management
+  - Prefer using GitHub integration and GitHub MCP server if available, otherwise attempt to use GitHub CLI
+
+### Version control operations
+
+- DO NOT use `git commit`, `git push`, `git checkout -b` or any other similar git-related write operation unless the user explicitly requests it
+
+### Commit message format
+
+Use the following format for commit messages:
+
+```
+<short description focused on the main change(s)>
+
+<long, potentially multi-line description going more in detail, but still covering only the important stuff - omitting minor details>
+```
+
+Example:
+
+```
+Added generic form validation component
+
+Generic form validation component should address issues with each form's validation being handled differently, creating inconsistency and slowing down development.
+
+New validation component uses `zod` 4.0 library for schema parsing.
+
+Following form validations have been refactored using new approach:
+
+- Create user
+- Edit user
+```
+
+### Pull/merge request description format
+
+- Always try to search for common PR description templates in the current project folder first (e.g. `.github/pull_request_template.md`)
+- If a template is available, follow its formatting while adhering to the general rules described below
+- When creating a GitHub PR, use GitHub-flavored Markdown
+  - See [GitHub-flavored Markdown spec](https://github.github.com/gfm/)
+- General description rules:
+  - Try to keep the description as short, concise and straight to the point as possible. Avoid any technical fluff, corporate speak or flowery language.
+  - Do not over-use bullet points beginning with a bold text, followed by a colon
+  - Do not go into too much detail about changes in specific files - that's better handled via line comments and will be done by the user later
+  - Focus on the goal the PR is trying to solve first, then cover how that goal has been achieved
+  - Emphasize any breaking or potentially risky changes introduced
+  - Split the description into different sections if needed
+  - The title should be clear and short, focusing on the main goal or changes
+  - If an existing template contains a check list, do not modify it and include it in the description as-is - the user will handle going through the items.
+
+Bad example:
+Title: `refactor(profile): Code update 🛠️`
+Description:
+
+```markdown
+Hey team 👋
+Just a quick refactor of the `UserProfile` component. It's now a modern functional component using hooks! ✨ Much cleaner. 😎
+
+- **Changes**: Swapped the old class component for a new function. Using `useState` and `useEffect` now. Much better!
+- **Tests**: Updated the tests and stories. All green! ✅
+
+Btw I renamed the `userName` prop to just `name`.
+Should be ready to merge. LMK what you think! 🙏🚀
+```
+
+Good example:
+Title: `Convert UserProfile to a functional component`
+Description:
+
+```markdown
+### Summary
+
+This PR refactors the `UserProfile` class component into a functional component using React Hooks (`useState`, `useEffect`).
+
+The goal is to improve the maintainability and readability of the component, while also aligning it with the modern React patterns used throughout the rest of the application.
+
+### Related issues
+
+- `ISSUE-123`
+
+### Details
+
+- The component was converted from a `class` to a `function`.
+- State management was migrated from `this.state` and `this.setState` to the `useState` hook.
+- Data fetching logic in `componentDidMount` was moved into a `useEffect` hook.
+- Associated Storybook stories and Jest tests were updated to support the new implementation.
+
+### Breaking Changes
+
+- The prop `userName` has been renamed to `name` to better align with the API response object. All parent components that render `<UserProfile>` must be updated to pass the `name` prop instead of `userName`.
+```
+
+## Dependency management
+
+### Installing dependencies
+
+- Always use the `deno add x` to install dependencies
+- Don't directly modify `deno.json` unless the user requests it explicitly
