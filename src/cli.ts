@@ -4,6 +4,7 @@ import denoJson from "../deno.json" with { type: "json" };
 import type { FilePath } from "./theme-manager/types.ts";
 
 type Args = {
+  // Flags
   /** Show help */
   help: boolean;
   /** Show version */
@@ -19,10 +20,14 @@ type Args = {
    * should be used directly instead of prompting a select
    */
   select?: string;
-  /** Subcommand to execute */
-  command?: "download-themes";
   /** URL for download-themes command (always set when command is "download-themes") */
   url?: string;
+  /** Remote themes directory path for download-themes command */
+  ["remote-themes-dir"]: string;
+  // Commands
+  /** Subcommand to execute */
+  command?: "download-themes";
+  // Rest
   /** Positional arguments */
   _: Array<string | number>;
   [key: string]: unknown;
@@ -39,7 +44,14 @@ export function getArgs(
 ): Args {
   const parsed = parseArgs(cliArgs, {
     boolean: ["help", "version"],
-    string: ["config", "themes", "backup", "select"],
+    string: [
+      "config",
+      "themes",
+      "backup",
+      "select",
+      "remote-themes-dir",
+      "url",
+    ],
     alias: {
       h: "help",
       v: "version",
@@ -47,24 +59,24 @@ export function getArgs(
       t: "themes",
       b: "backup",
       s: "select",
+      r: "remote-themes-dir",
+      u: "url",
     },
     default: {
       config: join(getDefaultConfigDir(homeDir, os), "alacritty.toml"),
       themes: join(getDefaultConfigDir(homeDir, os), "themes"),
       backup: join(getDefaultConfigDir(homeDir, os), "alacritty.bak.toml"),
+      "remote-themes-dir": "themes",
+      url: "https://github.com/alacritty/alacritty-theme",
     },
   });
 
   // Parse subcommand from positional arguments
   const firstArg = parsed._[0];
   if (typeof firstArg === "string" && firstArg === "download-themes") {
-    const url = parsed._[1];
     return {
       ...parsed,
       command: "download-themes",
-      url: typeof url === "string"
-        ? url
-        : "https://github.com/alacritty/alacritty-theme",
     };
   }
 
@@ -79,25 +91,30 @@ export function printHelp() {
     `alacritty-theme-switch ${denoJson.version}\n` +
       `Usage:\n` +
       `  ats [options]                    Interactive theme selection\n` +
-      `  ats download-themes [url]        Download themes from GitHub repository\n` +
+      `  ats download-themes [options]    Download themes from GitHub repository\n` +
       `\n` +
       `Commands:\n` +
-      `  download-themes [url]  Download themes from a GitHub repository\n` +
-      `                         (default: https://github.com/alacritty/alacritty-theme)\n` +
+      `  download-themes  Download themes from a GitHub repository\n` +
       `\n` +
       `Options:\n` +
-      `  -h, --help     Show this help message and exit.\n` +
-      `  -v, --version  Show the version number and exit.\n` +
-      `  -c, --config   Path to the alacritty's configuration file\n` +
-      `                 (default: $HOME/.config/alacritty/alacritty.toml)\n` +
-      `  -t, --themes   Path to the directory containing custom themes' files\n` +
-      `                 (default: $HOME/.config/alacritty/themes)\n` +
-      `  -b, --backup   Path to the alacritty's configuration file backup made\n` +
-      `                 before every switch\n` +
-      `                 (default: $HOME/.config/alacritty/alacritty.bak.toml)\n` +
-      `  -s, --select   Path (relative to themes' directory) to a single\n` +
-      `                 configuration file that should be used directly instead of\n` +
-      `                 prompting a select`,
+      `  -h, --help                 Show this help message and exit.\n` +
+      `  -v, --version              Show the version number and exit.\n` +
+      `  -c, --config               Path to the alacritty's configuration file\n` +
+      `                             (default: $HOME/.config/alacritty/alacritty.toml)\n` +
+      `  -t, --themes               Path to the directory containing custom themes' files\n` +
+      `                             (default: $HOME/.config/alacritty/themes)\n` +
+      `  -b, --backup               Path to the alacritty's configuration file backup made\n` +
+      `                             before every switch\n` +
+      `                             (default: $HOME/.config/alacritty/alacritty.bak.toml)\n` +
+      `  -s, --select               Path (relative to themes' directory) to a single\n` +
+      `                             configuration file that should be used directly instead of\n` +
+      `                             prompting a select\n` +
+      `\n` +
+      `download-themes options:\n` +
+      `  -u, --url                  GitHub repository URL to download themes from\n` +
+      `                             (default: https://github.com/alacritty/alacritty-theme)\n` +
+      `  -r, --remote-themes-dir    Remote themes directory path within the repository\n` +
+      `                             (default: themes)`,
   );
 }
 

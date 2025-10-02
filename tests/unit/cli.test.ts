@@ -287,3 +287,90 @@ Deno.test("getHomeDir: falls back to current directory when no env vars", () => 
 
   restoreEnv();
 });
+
+// Tests for download-themes command
+Deno.test("getArgs: download-themes command with default url", () => {
+  const args = getArgs(["download-themes"], "/home/user", "linux");
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/alacritty/alacritty-theme");
+  assertEquals(args["remote-themes-dir"], "themes");
+});
+
+Deno.test("getArgs: download-themes command with custom url (short form)", () => {
+  const args = getArgs(
+    ["download-themes", "-u", "https://github.com/custom/repo"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/custom/repo");
+});
+
+Deno.test("getArgs: download-themes command with custom url (long form)", () => {
+  const args = getArgs(
+    ["download-themes", "--url", "https://github.com/custom/repo"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/custom/repo");
+});
+
+Deno.test(
+  "getArgs: download-themes command with custom remote-themes-dir (short form)",
+  () => {
+    const args = getArgs(
+      ["download-themes", "-r", "custom-themes"],
+      "/home/user",
+      "linux",
+    );
+
+    assertEquals(args.command, "download-themes");
+    assertEquals(args["remote-themes-dir"], "custom-themes");
+  },
+);
+
+Deno.test(
+  "getArgs: download-themes command with custom remote-themes-dir (long form)",
+  () => {
+    const args = getArgs(
+      ["download-themes", "--remote-themes-dir", "custom-themes"],
+      "/home/user",
+      "linux",
+    );
+
+    assertEquals(args.command, "download-themes");
+    assertEquals(args["remote-themes-dir"], "custom-themes");
+  },
+);
+
+Deno.test(
+  "getArgs: download-themes command with both url and remote-themes-dir",
+  () => {
+    const args = getArgs(
+      [
+        "download-themes",
+        "-u",
+        "https://github.com/custom/repo",
+        "-r",
+        "my-themes",
+      ],
+      "/home/user",
+      "linux",
+    );
+
+    assertEquals(args.command, "download-themes");
+    assertEquals(args.url, "https://github.com/custom/repo");
+    assertEquals(args["remote-themes-dir"], "my-themes");
+  },
+);
+
+Deno.test("getArgs: default remote-themes-dir for non-download-themes", () => {
+  const args = getArgs([], "/home/user", "linux");
+
+  assertEquals(args["remote-themes-dir"], "themes");
+  assertEquals(args.command, undefined);
+});
