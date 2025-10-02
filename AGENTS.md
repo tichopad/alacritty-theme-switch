@@ -71,9 +71,25 @@ related errors into union types (e.g., `ParseConfigError`, `LoadThemesError`).
 
 ### Module organization
 
-Each module should have a clear, focused purpose. Use index files to re-export
-public APIs when appropriate. Keep error definitions close to the code that uses
-them. Define types near their usage, not in separate type-only files.
+Each module should have a clear, focused purpose. Keep error definitions close to
+the code that uses them. Define types near their usage, not in separate type-only
+files.
+
+**Do not use barrel export files (index.ts files that only re-export from other
+modules).** Instead, import directly from the specific module files. This improves
+code clarity by making dependencies explicit and avoids unnecessary indirection.
+
+```typescript
+// Good: Direct imports from specific modules
+import { GitHubClient } from "../src/theme-manager/github/client.ts";
+import { InvalidRepositoryUrlError } from "../src/theme-manager/github/errors.ts";
+
+// Bad: Importing from barrel files
+import {
+  GitHubClient,
+  InvalidRepositoryUrlError,
+} from "../src/theme-manager/github/index.ts";
+```
 
 ## File Structure Conventions
 
@@ -189,11 +205,13 @@ brevity. When in doubt, choose the more explicit and type-safe approach.
 
 - Always use `git` for version control
 - Unless specified otherwise, assume GitHub is used for repository management
-  - Prefer using GitHub integration and GitHub MCP server if available, otherwise attempt to use GitHub CLI
+  - Prefer using GitHub integration and GitHub MCP server if available,
+    otherwise attempt to use GitHub CLI
 
 ### Version control operations
 
-- DO NOT use `git commit`, `git push`, `git checkout -b` or any other similar git-related write operation unless the user explicitly requests it
+- DO NOT use `git commit`, `git push`, `git checkout -b` or any other similar
+  git-related write operation unless the user explicitly requests it
 
 ### Commit message format
 
@@ -222,45 +240,53 @@ Following form validations have been refactored using new approach:
 
 ### Pull/merge request description format
 
-- Always try to search for common PR description templates in the current project folder first (e.g. `.github/pull_request_template.md`)
-- If a template is available, follow its formatting while adhering to the general rules described below
+- Always try to search for common PR description templates in the current
+  project folder first (e.g. `.github/pull_request_template.md`)
+- If a template is available, follow its formatting while adhering to the
+  general rules described below
 - When creating a GitHub PR, use GitHub-flavored Markdown
   - See [GitHub-flavored Markdown spec](https://github.github.com/gfm/)
 - General description rules:
-  - Try to keep the description as short, concise and straight to the point as possible. Avoid any technical fluff, corporate speak or flowery language.
-  - Do not over-use bullet points beginning with a bold text, followed by a colon
-  - Do not go into too much detail about changes in specific files - that's better handled via line comments and will be done by the user later
-  - Focus on the goal the PR is trying to solve first, then cover how that goal has been achieved
+  - Try to keep the description as short, concise and straight to the point as
+    possible. Avoid any technical fluff, corporate speak or flowery language.
+  - Do not over-use bullet points beginning with a bold text, followed by a
+    colon
+  - Do not go into too much detail about changes in specific files - that's
+    better handled via line comments and will be done by the user later
+  - Focus on the goal the PR is trying to solve first, then cover how that goal
+    has been achieved
   - Emphasize any breaking or potentially risky changes introduced
   - Split the description into different sections if needed
   - The title should be clear and short, focusing on the main goal or changes
-  - If an existing template contains a check list, do not modify it and include it in the description as-is - the user will handle going through the items.
+  - If an existing template contains a check list, do not modify it and include
+    it in the description as-is - the user will handle going through the items.
 
-Bad example:
-Title: `refactor(profile): Code update 🛠️`
-Description:
+Bad example: Title: `refactor(profile): Code update 🛠️` Description:
 
 ```markdown
-Hey team 👋
-Just a quick refactor of the `UserProfile` component. It's now a modern functional component using hooks! ✨ Much cleaner. 😎
+Hey team 👋 Just a quick refactor of the `UserProfile` component. It's now a
+modern functional component using hooks! ✨ Much cleaner. 😎
 
-- **Changes**: Swapped the old class component for a new function. Using `useState` and `useEffect` now. Much better!
+- **Changes**: Swapped the old class component for a new function. Using
+  `useState` and `useEffect` now. Much better!
 - **Tests**: Updated the tests and stories. All green! ✅
 
-Btw I renamed the `userName` prop to just `name`.
-Should be ready to merge. LMK what you think! 🙏🚀
+Btw I renamed the `userName` prop to just `name`. Should be ready to merge. LMK
+what you think! 🙏🚀
 ```
 
-Good example:
-Title: `Convert UserProfile to a functional component`
+Good example: Title: `Convert UserProfile to a functional component`
 Description:
 
 ```markdown
 ### Summary
 
-This PR refactors the `UserProfile` class component into a functional component using React Hooks (`useState`, `useEffect`).
+This PR refactors the `UserProfile` class component into a functional component
+using React Hooks (`useState`, `useEffect`).
 
-The goal is to improve the maintainability and readability of the component, while also aligning it with the modern React patterns used throughout the rest of the application.
+The goal is to improve the maintainability and readability of the component,
+while also aligning it with the modern React patterns used throughout the rest
+of the application.
 
 ### Related issues
 
@@ -269,13 +295,17 @@ The goal is to improve the maintainability and readability of the component, whi
 ### Details
 
 - The component was converted from a `class` to a `function`.
-- State management was migrated from `this.state` and `this.setState` to the `useState` hook.
+- State management was migrated from `this.state` and `this.setState` to the
+  `useState` hook.
 - Data fetching logic in `componentDidMount` was moved into a `useEffect` hook.
-- Associated Storybook stories and Jest tests were updated to support the new implementation.
+- Associated Storybook stories and Jest tests were updated to support the new
+  implementation.
 
 ### Breaking Changes
 
-- The prop `userName` has been renamed to `name` to better align with the API response object. All parent components that render `<UserProfile>` must be updated to pass the `name` prop instead of `userName`.
+- The prop `userName` has been renamed to `name` to better align with the API
+  response object. All parent components that render `<UserProfile>` must be
+  updated to pass the `name` prop instead of `userName`.
 ```
 
 ## Dependency management

@@ -18,6 +18,7 @@
     "@std/cli": "jsr:@std/cli@1.0.21",
     "@std/fs": "jsr:@std/fs@1.0.19",
     "@std/path": "jsr:@std/path@1.1.2",
+    "@std/testing": "jsr:@std/testing@1.0.15",
     "@std/toml": "jsr:@std/toml@1.0.8"
   }
 }
