@@ -19,6 +19,10 @@ type Args = {
    * should be used directly instead of prompting a select
    */
   select?: string;
+  /** Subcommand to execute */
+  command?: "download-themes";
+  /** URL for download-themes command (always set when command is "download-themes") */
+  url?: string;
   /** Positional arguments */
   _: Array<string | number>;
   [key: string]: unknown;
@@ -33,7 +37,7 @@ export function getArgs(
   homeDir: FilePath,
   os: typeof Deno.build.os,
 ): Args {
-  return parseArgs(cliArgs, {
+  const parsed = parseArgs(cliArgs, {
     boolean: ["help", "version"],
     string: ["config", "themes", "backup", "select"],
     alias: {
@@ -50,6 +54,21 @@ export function getArgs(
       backup: join(getDefaultConfigDir(homeDir, os), "alacritty.bak.toml"),
     },
   });
+
+  // Parse subcommand from positional arguments
+  const firstArg = parsed._[0];
+  if (typeof firstArg === "string" && firstArg === "download-themes") {
+    const url = parsed._[1];
+    return {
+      ...parsed,
+      command: "download-themes",
+      url: typeof url === "string"
+        ? url
+        : "https://github.com/alacritty/alacritty-theme",
+    };
+  }
+
+  return parsed;
 }
 
 /**
@@ -59,7 +78,13 @@ export function printHelp() {
   console.log(
     `alacritty-theme-switch ${denoJson.version}\n` +
       `Usage:\n` +
-      `  ats [options]\n` +
+      `  ats [options]                    Interactive theme selection\n` +
+      `  ats download-themes [url]        Download themes from GitHub repository\n` +
+      `\n` +
+      `Commands:\n` +
+      `  download-themes [url]  Download themes from a GitHub repository\n` +
+      `                         (default: https://github.com/alacritty/alacritty-theme)\n` +
+      `\n` +
       `Options:\n` +
       `  -h, --help     Show this help message and exit.\n` +
       `  -v, --version  Show the version number and exit.\n` +

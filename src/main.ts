@@ -23,6 +23,13 @@ if (args.version) {
   Deno.exit(0);
 }
 
+// Handle download-themes subcommand
+if (args.command === "download-themes") {
+  // url is always set when command is "download-themes" (default is applied in getArgs)
+  console.log(`Download themes from ${args.url!}`);
+  Deno.exit(0);
+}
+
 // We're in theme management territory now -> create a manager
 const managerResult = await createThemeManager({
   configPath: args.config,
