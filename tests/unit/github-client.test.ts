@@ -49,25 +49,11 @@ const mockTreeResponse = {
   truncated: false,
 };
 
-const mockContentsResponse = {
-  name: "monokai.toml",
-  path: "themes/monokai.toml",
-  sha: "1e7510b61e24363888f6ef19610bc26d2f81208d",
-  size: 58573,
-  url:
-    "https://api.github.com/repos/alacritty/alacritty-theme/contents/themes/monokai.toml",
-  html_url:
-    "https://github.com/alacritty/alacritty-theme/blob/master/themes/monokai.toml",
-  git_url:
-    "https://api.github.com/repos/alacritty/alacritty-theme/git/blobs/1e7510b61e24363888f6ef19610bc26d2f81208d",
-  download_url:
-    "https://raw.githubusercontent.com/alacritty/alacritty-theme/master/themes/monokai.toml",
-  type: "file" as const,
-  content: btoa(
-    '[colors.primary]\nbackground = "#272822"\nforeground = "#F8F8F2"',
-  ),
-  encoding: "base64" as const,
-};
+// Mock raw content responses (plain text, not base64)
+const mockMonokaiContent =
+  '[colors.primary]\nbackground = "#272822"\nforeground = "#F8F8F2"';
+const mockDraculaContent =
+  '[colors.primary]\nbackground = "#282a36"\nforeground = "#f8f8f2"';
 
 Deno.test("createGitHubClient: should parse valid HTTPS URL", () => {
   const result = createGitHubClient(
@@ -157,15 +143,15 @@ Deno.test("GitHubClient: downloadTheme should download a single theme", async ()
   const originalFetch = globalThis.fetch;
   const tempDir = await Deno.makeTempDir();
 
-  // Mock fetch to return file contents
+  // Mock fetch to return raw file contents from raw.githubusercontent.com
   const fetchStub = stub(
     globalThis,
     "fetch",
     (_input: string | URL | Request, _init?: RequestInit) => {
       return Promise.resolve(
-        new Response(JSON.stringify(mockContentsResponse), {
+        new Response(mockMonokaiContent, {
           status: 200,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
         }),
       );
     },
@@ -201,10 +187,7 @@ Deno.test("GitHubClient: downloadTheme should download a single theme", async ()
 
       // Verify file contents
       const content = await Deno.readTextFile(theme.path);
-      assertEquals(
-        content,
-        '[colors.primary]\nbackground = "#272822"\nforeground = "#F8F8F2"',
-      );
+      assertEquals(content, mockMonokaiContent);
     }
   } finally {
     fetchStub.restore();
@@ -267,7 +250,7 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
     (input: string | URL | Request, _init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
 
-      // Return tree response for listThemes
+      // Return tree response for listThemes (API call)
       if (url.includes("/git/trees/")) {
         return Promise.resolve(
           new Response(JSON.stringify(mockTreeResponse), {
@@ -277,29 +260,28 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
         );
       }
 
-      // Return contents response for downloadTheme
-      if (url.includes("/contents/themes/monokai.toml")) {
+      // Return raw content for monokai (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("monokai.toml")
+      ) {
         return Promise.resolve(
-          new Response(JSON.stringify(mockContentsResponse), {
+          new Response(mockMonokaiContent, {
             status: 200,
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
           }),
         );
       }
 
-      if (url.includes("/contents/themes/dracula.toml")) {
-        const draculaResponse = {
-          ...mockContentsResponse,
-          name: "dracula.toml",
-          path: "themes/dracula.toml",
-          content: btoa(
-            '[colors.primary]\nbackground = "#282a36"\nforeground = "#f8f8f2"',
-          ),
-        };
+      // Return raw content for dracula (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("dracula.toml")
+      ) {
         return Promise.resolve(
-          new Response(JSON.stringify(draculaResponse), {
+          new Response(mockDraculaContent, {
             status: 200,
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
           }),
         );
       }
@@ -318,7 +300,18 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
     }
 
     const client = clientResult.data;
-    const result = await client.downloadAllThemes(tempDir).toResult();
+
+    // First list themes
+    const themesResult = await client.listThemes().toResult();
+    assertEquals(themesResult.isOk(), true);
+
+    if (!themesResult.isOk()) {
+      throw new Error("Failed to list themes");
+    }
+
+    // Then download them
+    const result = await client.downloadAllThemes(themesResult.data, tempDir)
+      .toResult();
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
@@ -343,16 +336,10 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
 
       // Verify file contents
       const monokaiContent = await Deno.readTextFile(monokaiTheme.path);
-      assertEquals(
-        monokaiContent,
-        '[colors.primary]\nbackground = "#272822"\nforeground = "#F8F8F2"',
-      );
+      assertEquals(monokaiContent, mockMonokaiContent);
 
       const draculaContent = await Deno.readTextFile(draculaTheme.path);
-      assertEquals(
-        draculaContent,
-        '[colors.primary]\nbackground = "#282a36"\nforeground = "#f8f8f2"',
-      );
+      assertEquals(draculaContent, mockDraculaContent);
     }
   } finally {
     fetchStub.restore();
@@ -373,7 +360,7 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
     (input: string | URL | Request, _init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
 
-      // Return tree response for listThemes
+      // Return tree response for listThemes (API call)
       if (url.includes("/git/trees/")) {
         return Promise.resolve(
           new Response(JSON.stringify(mockTreeResponse), {
@@ -383,18 +370,24 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
         );
       }
 
-      // Return success for monokai
-      if (url.includes("/contents/themes/monokai.toml")) {
+      // Return success for monokai (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("monokai.toml")
+      ) {
         return Promise.resolve(
-          new Response(JSON.stringify(mockContentsResponse), {
+          new Response(mockMonokaiContent, {
             status: 200,
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
           }),
         );
       }
 
-      // Return error for dracula
-      if (url.includes("/contents/themes/dracula.toml")) {
+      // Return error for dracula (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("dracula.toml")
+      ) {
         return Promise.resolve(
           new Response("Server Error", {
             status: 500,
@@ -417,7 +410,18 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
     }
 
     const client = clientResult.data;
-    const result = await client.downloadAllThemes(tempDir).toResult();
+
+    // First list themes
+    const themesResult = await client.listThemes().toResult();
+    assertEquals(themesResult.isOk(), true);
+
+    if (!themesResult.isOk()) {
+      throw new Error("Failed to list themes");
+    }
+
+    // Then download them (should fail on one)
+    const result = await client.downloadAllThemes(themesResult.data, tempDir)
+      .toResult();
 
     // Should fail if any download fails
     assertEquals(result.isErr(), true);

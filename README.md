@@ -47,7 +47,39 @@ The utility can be configured by passing additional flags/parameters:
 
 # Usage
 
-## 1) Create folder for your color themes
+## Quick Start: Download Themes
+
+The easiest way to get started is to download themes from the official Alacritty
+themes repository:
+
+```bash
+ats download-themes
+```
+
+This will download all themes from the
+[official Alacritty themes repository](https://github.com/alacritty/alacritty-theme)
+to your themes directory (`~/.config/alacritty/themes` by default).
+
+You can customize the download with these options:
+
+- `--url` or `-u`: GitHub repository URL to download themes from (default:
+  `https://github.com/alacritty/alacritty-theme`)
+- `--themes` or `-t`: Local directory where themes should be saved (default:
+  `~/.config/alacritty/themes`)
+
+Example:
+
+```bash
+# Download themes from a custom repository
+ats download-themes --url https://github.com/custom/themes-repo
+
+# Download themes to a custom directory
+ats download-themes --themes ~/my-alacritty-themes
+```
+
+## Manual Setup
+
+### 1) Create folder for your color themes
 
 The folder is in `~/.config/alacritty/themes/` by default, but can be set by
 using `--themes` parameter.
@@ -61,7 +93,7 @@ Example:
 │   └── themes
 ```
 
-## 2) Add color theme file
+### 2) Add color theme file
 
 Create new TOML file in your color themes directory.
 
@@ -108,9 +140,11 @@ cyan = '0xA1EFE4'
 white = '0xF9F8F5'
 ```
 
-## 3) Run `alacritty-theme-switch` or `ats`
+## Switching Themes
 
-## 4) Select theme and hit Enter
+### 1) Run `alacritty-theme-switch` or `ats`
+
+### 2) Select theme and hit Enter
 
 ```
 ? Select Alacritty color theme: (Use arrow keys)

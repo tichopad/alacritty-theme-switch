@@ -7,6 +7,7 @@ import {
   printVersion,
   underscore,
 } from "./cli.ts";
+import { downloadThemesCommand } from "./commands/download-themes.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);
@@ -25,9 +26,33 @@ if (args.version) {
 
 // Handle download-themes subcommand
 if (args.command === "download-themes") {
-  // url is always set when command is "download-themes" (default is applied in getArgs)
-  console.log(`Download themes from ${args.url!}`);
-  Deno.exit(0);
+  console.log(`Downloading themes from ${bold(args.url!)}...`);
+  console.log(`Git reference: ${args.ref}`);
+  console.log(`Output directory: ${args.themes}`);
+  console.log();
+
+  await downloadThemesCommand({
+    repositoryUrl: args.url,
+    outputPath: args.themes,
+    ref: args.ref,
+  }).match(
+    (downloadedThemes) => {
+      console.log(
+        `\nSuccessfully downloaded ${
+          bold(downloadedThemes.length.toString())
+        } theme(s): ✅`,
+      );
+      downloadedThemes.forEach((theme) => {
+        console.log(` - ${theme.label}`);
+      });
+      Deno.exit(0);
+    },
+    (error) => {
+      console.error("Failed to download themes! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );
 }
 
 // We're in theme management territory now -> create a manager

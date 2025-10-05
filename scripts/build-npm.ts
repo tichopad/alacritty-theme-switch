@@ -11,6 +11,11 @@ await build({
   },
   scriptModule: false,
   test: true,
+  // Disable type checking as Node.js built-in types might not be
+  // always compatible with Deno's types. Typical issue is setTimeout.
+  // It shouldn't be an issue, because runtime viability is checked with
+  // tests and type-checking is done by Deno.
+  typeCheck: false,
   package: {
     // package.json properties
     name: "alacritty-theme-switch",

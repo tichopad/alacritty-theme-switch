@@ -21,9 +21,9 @@ type Args = {
    */
   select?: string;
   /** URL for download-themes command (always set when command is "download-themes") */
-  url?: string;
-  /** Remote themes directory path for download-themes command */
-  ["remote-themes-dir"]: string;
+  url: string;
+  /** Git reference (branch, tag, or commit SHA) for download-themes command */
+  ref: string;
   // Commands
   /** Subcommand to execute */
   command?: "download-themes";
@@ -49,8 +49,8 @@ export function getArgs(
       "themes",
       "backup",
       "select",
-      "remote-themes-dir",
       "url",
+      "ref",
     ],
     alias: {
       h: "help",
@@ -59,15 +59,15 @@ export function getArgs(
       t: "themes",
       b: "backup",
       s: "select",
-      r: "remote-themes-dir",
       u: "url",
+      r: "ref",
     },
     default: {
       config: join(getDefaultConfigDir(homeDir, os), "alacritty.toml"),
       themes: join(getDefaultConfigDir(homeDir, os), "themes"),
       backup: join(getDefaultConfigDir(homeDir, os), "alacritty.bak.toml"),
-      "remote-themes-dir": "themes",
       url: "https://github.com/alacritty/alacritty-theme",
+      ref: "master",
     },
   });
 
@@ -113,8 +113,8 @@ export function printHelp() {
       `download-themes options:\n` +
       `  -u, --url                  GitHub repository URL to download themes from\n` +
       `                             (default: https://github.com/alacritty/alacritty-theme)\n` +
-      `  -r, --remote-themes-dir    Remote themes directory path within the repository\n` +
-      `                             (default: themes)`,
+      `  -r, --ref                  Git reference (branch, tag, or commit SHA) to download from\n` +
+      `                             (default: master)`,
   );
 }
 

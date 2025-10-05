@@ -4,11 +4,11 @@
   "license": "MIT",
   "tasks": {
     "check": "deno fmt --check && deno lint && deno check",
-    "dev": "deno run --allow-write --allow-env --allow-read --watch ./src/main.ts",
-    "run": "deno run --allow-write --allow-env --allow-read ./src/main.ts",
+    "dev": "deno run --allow-write --allow-env --allow-read --allow-net --watch ./src/main.ts",
+    "run": "deno run --allow-write --allow-env --allow-read --allow-net ./src/main.ts",
     "test": "deno test --allow-write --allow-env --allow-read ./tests/unit",
     "build-npm": "deno run --allow-read --allow-write --allow-net --allow-env --allow-run scripts/build-npm.ts",
-    "build-binary": "deno compile --allow-write --allow-env --allow-read --output=bin/ats ./src/main.ts"
+    "build-binary": "deno compile --allow-write --allow-env --allow-read --allow-net --output=bin/ats ./src/main.ts"
   },
   "exports": "./src/main.ts",
   "imports": {

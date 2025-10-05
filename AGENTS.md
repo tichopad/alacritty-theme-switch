@@ -71,13 +71,14 @@ related errors into union types (e.g., `ParseConfigError`, `LoadThemesError`).
 
 ### Module organization
 
-Each module should have a clear, focused purpose. Keep error definitions close to
-the code that uses them. Define types near their usage, not in separate type-only
-files.
+Each module should have a clear, focused purpose. Keep error definitions close
+to the code that uses them. Define types near their usage, not in separate
+type-only files.
 
 **Do not use barrel export files (index.ts files that only re-export from other
-modules).** Instead, import directly from the specific module files. This improves
-code clarity by making dependencies explicit and avoids unnecessary indirection.
+modules).** Instead, import directly from the specific module files. This
+improves code clarity by making dependencies explicit and avoids unnecessary
+indirection.
 
 ```typescript
 // Good: Direct imports from specific modules
@@ -113,6 +114,12 @@ PascalCase for types and interfaces (`ThemeManager`, `ParseConfigError`). Use
 SCREAMING_SNAKE_CASE for module-level constants.
 
 ## Testing Guidelines
+
+### Running tests
+
+The tests need to be run with `--allow-all` to have the correct permissions. Use
+the `deno task test` command to run all tests and
+`deno task test ./path/to/test.ts` to run a specific test file.
 
 ### Test framework
 
@@ -178,7 +185,7 @@ const config = ResultAsync.fromPromise(Deno.readTextFile(configPath))
 ```typescript
 // Chain validations using flatMap
 function validateTheme(
-  path: string
+  path: string,
 ): ResultAsync<Theme, CheckThemeExistsError> {
   return checkFileExists(path)
     .flatMap(() => checkIsFile(path))
@@ -192,7 +199,7 @@ function validateTheme(
 ```typescript
 // Collect multiple errors when processing lists
 const results = await Promise.all(
-  themePaths.map((path) => validateTheme(path).toResult())
+  themePaths.map((path) => validateTheme(path).toResult()),
 );
 const errors = results.filter((r) => r.isErr()).map((r) => r.error);
 const themes = results.filter((r) => r.isOk()).map((r) => r.data);
@@ -314,3 +321,15 @@ of the application.
 
 - Always use the `deno add x` to install dependencies
 - Don't directly modify `deno.json` unless the user requests it explicitly
+
+## Documentation sources
+
+### General
+
+Try to use Context7 or web fetch to get documentation for a library if
+available.
+
+### JSR/Deno libraries
+
+For JSR/Deno libraries, use the built-in `deno doc` command to read
+documentation, e.g. `deno doc jsr:@std/cli/unstable-progress-bar`.

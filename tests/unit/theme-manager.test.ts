@@ -221,7 +221,7 @@ Deno.test("ThemeManager.applyThemeByFilename: applies theme by filename", async 
 
   const config = manager.getConfig();
   assertEquals(
-    config.general?.import?.some((i) => i.includes("monokai-pro.toml")),
+    config.general?.import?.some((i: string) => i.includes("monokai-pro.toml")),
     true,
   );
 });

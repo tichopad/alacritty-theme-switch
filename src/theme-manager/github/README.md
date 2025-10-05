@@ -12,7 +12,7 @@ import { createGitHubClient } from "./github/client.ts";
 
 // Create a client for the official Alacritty themes repository
 const clientResult = createGitHubClient(
-  "https://github.com/alacritty/alacritty-theme"
+  "https://github.com/alacritty/alacritty-theme",
 );
 
 if (clientResult.isErr()) {
@@ -42,7 +42,7 @@ if (downloadResult.isOk()) {
 
 ```typescript
 const clientResult = createGitHubClient(
-  "https://github.com/alacritty/alacritty-theme"
+  "https://github.com/alacritty/alacritty-theme",
 );
 
 if (clientResult.isErr()) {
@@ -66,8 +66,8 @@ if (result.isOk()) {
 
 ### Supported URL Formats
 
-The `createGitHubClient` function accepts GitHub repository URLs in the following
-formats:
+The `createGitHubClient` function accepts GitHub repository URLs in the
+following formats:
 
 - `https://github.com/owner/repo`
 - `https://github.com/owner/repo.git`
@@ -79,7 +79,7 @@ formats:
 
 ```typescript
 function createGitHubClient(
-  repositoryUrl: string
+  repositoryUrl: string,
 ): Result<GitHubClient, InvalidRepositoryUrlError>;
 ```
 
@@ -94,13 +94,14 @@ either a GitHubClient instance or an error if the URL format is invalid.
 
 **Returns:**
 
-- `Result<GitHubClient, InvalidRepositoryUrlError>` - A Result containing the GitHubClient instance or an InvalidRepositoryUrlError
+- `Result<GitHubClient, InvalidRepositoryUrlError>` - A Result containing the
+  GitHubClient instance or an InvalidRepositoryUrlError
 
 **Example:**
 
 ```typescript
 const clientResult = createGitHubClient(
-  "https://github.com/alacritty/alacritty-theme"
+  "https://github.com/alacritty/alacritty-theme",
 );
 
 if (clientResult.isOk()) {

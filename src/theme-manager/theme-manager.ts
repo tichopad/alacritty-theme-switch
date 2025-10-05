@@ -66,7 +66,7 @@ class ThemeManager {
         newConfig.general.import ??= [];
         // Remove all themes from import entries first
         newConfig.general.import = newConfig.general.import.filter(
-          (importEntryPath) => !this.#themesPaths.has(importEntryPath),
+          (importEntryPath: string) => !this.#themesPaths.has(importEntryPath),
         );
         // Then add the selected theme there
         newConfig.general.import.push(selectedTheme.path);

@@ -30,23 +30,6 @@ interface GitHubTreeResponse {
 }
 
 /**
- * Response from GitHub API for file contents.
- */
-interface GitHubContentsResponse {
-  name: string;
-  path: string;
-  sha: string;
-  size: number;
-  url: string;
-  html_url: string;
-  git_url: string;
-  download_url: string;
-  type: "file";
-  content: string;
-  encoding: "base64";
-}
-
-/**
  * Parsed repository information from a GitHub URL.
  */
 interface RepositoryInfo {
@@ -58,7 +41,14 @@ interface RepositoryInfo {
  * GitHub client for fetching Alacritty themes from a remote repository.
  *
  * This client provides methods to list and download TOML theme files from a GitHub repository.
- * It uses GitHub's REST API v3 and doesn't require authentication for public repositories.
+ * It uses GitHub's REST API v3 for listing files, but downloads content directly from
+ * raw.githubusercontent.com to avoid API rate limits.
+ *
+ * API rate limits (only applies to listing):
+ * - Without authentication: 60 requests per hour
+ * - With authentication: 5000 requests per hour
+ *
+ * Raw content downloads are not subject to API rate limits.
  *
  * Note: This class is not exported directly. Use the `createGitHubClient` factory function
  * to create instances with proper error handling.
@@ -68,7 +58,10 @@ interface RepositoryInfo {
 class GitHubClient {
   private readonly owner: string;
   private readonly repo: string;
+  private readonly ref: string;
   private readonly apiBaseUrl = "https://api.github.com";
+  private readonly rawBaseUrl = "https://raw.githubusercontent.com";
+  private readonly token?: string;
 
   /**
    * Creates a new GitHub client for the specified repository.
@@ -78,12 +71,16 @@ class GitHubClient {
    *
    * @param owner - GitHub repository owner
    * @param repo - GitHub repository name
+   * @param ref - Git reference (branch, tag, or commit SHA) to use for downloads (default: "master")
+   * @param token - Optional GitHub personal access token for authentication
    *
    * @internal
    */
-  constructor(owner: string, repo: string) {
+  constructor(owner: string, repo: string, ref = "master", token?: string) {
     this.owner = owner;
     this.repo = repo;
+    this.ref = ref;
+    this.token = token;
   }
 
   /**
@@ -132,8 +129,10 @@ class GitHubClient {
   /**
    * Downloads a single theme file from the repository to the specified output directory.
    *
-   * The file will be saved with its original filename in the output directory.
-   * If the output directory doesn't exist, it will be created.
+   * This method fetches the file content directly from raw.githubusercontent.com,
+   * which is not subject to GitHub API rate limits. The file will be saved with
+   * its original filename in the output directory. If the output directory doesn't
+   * exist, it will be created.
    *
    * @param remotePath - Path to the theme file in the repository (e.g., "themes/monokai_pro.toml")
    * @param outputPath - Local directory path where the theme should be saved
@@ -158,14 +157,13 @@ class GitHubClient {
     remotePath: string,
     outputPath: FilePath,
   ): ResultAsync<Theme, GitHubClientError> {
+    // Construct raw content URL
     const url =
-      `${this.apiBaseUrl}/repos/${this.owner}/${this.repo}/contents/${remotePath}`;
+      `${this.rawBaseUrl}/${this.owner}/${this.repo}/refs/heads/${this.ref}/${remotePath}`;
 
     return this.ensureDirectory(outputPath)
-      .flatMap(() => this.fetchJson<GitHubContentsResponse>(url))
-      .flatMap((response) => {
-        // Decode base64 content
-        const content = atob(response.content);
+      .flatMap(() => this.fetchRawContent(url))
+      .flatMap((content) => {
         const filename = basename(remotePath);
         const localPath = join(outputPath, filename);
 
@@ -184,54 +182,103 @@ class GitHubClient {
   /**
    * Downloads all TOML theme files from the repository to the specified output directory.
    *
-   * This method first lists all themes in the repository, then downloads each one.
+   * This method downloads each theme file sequentially from raw.githubusercontent.com, which is not
+   * subject to API rate limits.
+   *
    * If the output directory doesn't exist, it will be created.
    *
+   * @param themes - Array of themes to download (typically obtained from listThemes())
    * @param outputPath - Local directory path where themes should be saved
+   * @param onProgress - Optional callback to report download progress
    * @returns A ResultAsync containing an array of downloaded themes with local paths or an error
    *
    * @example
    * ```typescript
    * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
-   * const result = await client.downloadAllThemes("./my-themes").toResult();
+   * const themesResult = await client.listThemes().toResult();
    *
-   * if (result.isOk()) {
-   *   console.log(`Downloaded ${result.data.length} themes`);
-   *   result.data.forEach(theme => {
-   *     console.log(`  - ${theme.label}`);
-   *   });
-   * } else {
-   *   console.error("Download failed:", result.error);
+   * if (themesResult.isOk()) {
+   *   const result = await client.downloadAllThemes(themesResult.data, "./my-themes").toResult();
+   *
+   *   if (result.isOk()) {
+   *     console.log(`Downloaded ${result.data.length} themes`);
+   *     result.data.forEach(theme => {
+   *       console.log(`  - ${theme.label}`);
+   *     });
+   *   } else {
+   *     console.error("Download failed:", result.error);
+   *   }
+   * }
+   * ```
+   *
+   * @example With progress callback
+   * ```typescript
+   * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
+   * const themesResult = await client.listThemes().toResult();
+   *
+   * if (themesResult.isOk()) {
+   *   const result = await client.downloadAllThemes(
+   *     themesResult.data,
+   *     "./my-themes",
+   *     (current, total) => {
+   *       console.log(`Progress: ${current}/${total}`);
+   *     }
+   *   ).toResult();
    * }
    * ```
    */
   downloadAllThemes(
+    themes: Theme[],
     outputPath: FilePath,
+    onProgress?: (current: number, total: number) => void,
   ): ResultAsync<Theme[], GitHubClientError> {
-    return this.listThemes()
-      .flatMap((themes) => {
-        // Download all themes in parallel
-        const downloadPromises = themes.map((theme) =>
-          this.downloadTheme(theme.path, outputPath).toResult()
-        );
+    // Download themes sequentially
+    return ResultAsync.fromPromise(
+      this.downloadThemesSequentially(
+        themes,
+        outputPath,
+        onProgress,
+      ),
+      (error) => new FileDownloadError("multiple files", { cause: error }),
+    );
+  }
 
-        return ResultAsync.fromPromise(
-          Promise.all(downloadPromises),
-          (error) => new FileDownloadError("multiple files", { cause: error }),
-        );
-      })
-      .flatMap((results) => {
-        // Separate successful downloads from errors
-        const errors = results.filter((r) => r.isErr());
-        const themes = results.filter((r) => r.isOk()).map((r) => r.data);
+  /**
+   * Downloads themes sequentially.
+   *
+   * @param themes - Array of themes to download
+   * @param outputPath - Local directory path where themes should be saved
+   * @param onProgress - Optional callback to report download progress
+   * @returns Promise containing an array of downloaded themes or throws an error
+   */
+  private async downloadThemesSequentially(
+    themes: Theme[],
+    outputPath: FilePath,
+    onProgress?: (current: number, total: number) => void,
+  ): Promise<Theme[]> {
+    const downloadedThemes: Theme[] = [];
+    const total = themes.length;
 
-        // If any downloads failed, return the first error
-        if (errors.length > 0) {
-          return ResultAsync.err(errors[0].error);
-        }
+    for (let i = 0; i < themes.length; i++) {
+      const theme = themes[i];
 
-        return ResultAsync.ok(themes);
-      });
+      // Download the theme
+      const result = await this.downloadTheme(theme.path, outputPath)
+        .toResult();
+
+      if (result.isErr()) {
+        throw result.error;
+      }
+
+      downloadedThemes.push(result.data);
+
+      // Report progress
+      if (onProgress) {
+        onProgress(i + 1, total);
+      }
+    }
+
+    return downloadedThemes;
   }
 
   /**
@@ -242,13 +289,18 @@ class GitHubClient {
    * @returns A ResultAsync containing the parsed JSON response or an error
    */
   private fetchJson<T>(url: string): ResultAsync<T, GitHubClientError> {
+    const headers: Record<string, string> = {
+      "Accept": "application/vnd.github.v3+json",
+      "User-Agent": "alacritty-theme-switch",
+    };
+
+    // Add authentication token if available
+    if (this.token) {
+      headers["Authorization"] = `Bearer ${this.token}`;
+    }
+
     return ResultAsync.fromPromise(
-      fetch(url, {
-        headers: {
-          "Accept": "application/vnd.github.v3+json",
-          "User-Agent": "alacritty-theme-switch",
-        },
-      }),
+      fetch(url, { headers }),
       (error) => new GitHubApiError(url, { cause: error }),
     ).flatMap((response) => {
       if (!response.ok) {
@@ -265,6 +317,38 @@ class GitHubClient {
       return ResultAsync.fromPromise(
         response.json() as Promise<T>,
         (error) => new GitHubApiError(url, { cause: error }),
+      );
+    });
+  }
+
+  /**
+   * Fetches raw text content from a URL.
+   *
+   * This method is used to download files directly from raw.githubusercontent.com,
+   * which bypasses GitHub API rate limits.
+   *
+   * @param url - Raw content URL
+   * @returns A ResultAsync containing the text content or an error
+   */
+  private fetchRawContent(url: string): ResultAsync<string, GitHubClientError> {
+    return ResultAsync.fromPromise(
+      fetch(url),
+      (error) => new FileDownloadError(url, { cause: error }),
+    ).flatMap((response) => {
+      if (!response.ok) {
+        const err = new FileDownloadError(
+          url,
+          {
+            cause: new Error(
+              `HTTP ${response.status}: ${response.statusText}`,
+            ),
+          },
+        );
+        return ResultAsync.err(err);
+      }
+      return ResultAsync.fromPromise(
+        response.text(),
+        (error) => new FileDownloadError(url, { cause: error }),
       );
     });
   }
@@ -326,10 +410,17 @@ function parseRepositoryUrl(url: string): RepositoryInfo | null {
  * This factory function parses the repository URL and returns a Result containing
  * either a GitHubClient instance or an error if the URL format is invalid.
  *
+ * The client will automatically use a GitHub token from the GITHUB_TOKEN environment
+ * variable if available, which increases the API rate limit from 60 to 5000 requests/hour.
+ * Note that only the listing operation uses the API; downloads fetch directly from
+ * raw.githubusercontent.com and are not subject to rate limits.
+ *
  * @param repositoryUrl - GitHub repository URL in one of the following formats:
  *   - https://github.com/owner/repo
  *   - https://github.com/owner/repo.git
  *   - git@github.com:owner/repo.git
+ * @param ref - Git reference (branch, tag, or commit SHA) to use for downloads (default: "master")
+ * @param token - Optional GitHub personal access token. If not provided, will check GITHUB_TOKEN env var
  *
  * @returns A Result containing the GitHubClient instance or an InvalidRepositoryUrlError
  *
@@ -354,6 +445,8 @@ function parseRepositoryUrl(url: string): RepositoryInfo | null {
  */
 export function createGitHubClient(
   repositoryUrl: string,
+  ref = "master",
+  token?: string,
 ): Result<GitHubClient, InvalidRepositoryUrlError> {
   const repoInfo = parseRepositoryUrl(repositoryUrl);
 
@@ -361,5 +454,10 @@ export function createGitHubClient(
     return Result.err(new InvalidRepositoryUrlError(repositoryUrl));
   }
 
-  return Result.ok(new GitHubClient(repoInfo.owner, repoInfo.repo));
+  // Use provided token or fall back to GITHUB_TOKEN environment variable
+  const authToken = token ?? Deno.env.get("GITHUB_TOKEN");
+
+  return Result.ok(
+    new GitHubClient(repoInfo.owner, repoInfo.repo, ref, authToken),
+  );
 }
