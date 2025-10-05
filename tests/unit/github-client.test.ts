@@ -432,3 +432,373 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
     await Deno.remove(tempDir, { recursive: true });
   }
 });
+
+Deno.test("GitHubClient: downloadAllThemes should download LICENSE file", async () => {
+  const originalFetch = globalThis.fetch;
+  const tempDir = await Deno.makeTempDir();
+
+  const mockLicenseContent = "Apache License 2.0\n\nCopyright...";
+
+  // Mock fetch to return different responses based on URL
+  const fetchStub = stub(
+    globalThis,
+    "fetch",
+    (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      // Return tree response for listThemes (API call)
+      if (url.includes("/git/trees/")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockTreeResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+
+      // Return raw content for monokai (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("monokai.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockMonokaiContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return raw content for dracula (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("dracula.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockDraculaContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return LICENSE content
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("LICENSE")
+      ) {
+        return Promise.resolve(
+          new Response(mockLicenseContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    },
+  );
+
+  try {
+    const clientResult = createGitHubClient(
+      "https://github.com/alacritty/alacritty-theme",
+    );
+
+    if (!clientResult.isOk()) {
+      throw new Error("Failed to create client");
+    }
+
+    const client = clientResult.data;
+
+    // First list themes
+    const themesResult = await client.listThemes().toResult();
+    assertEquals(themesResult.isOk(), true);
+
+    if (!themesResult.isOk()) {
+      throw new Error("Failed to list themes");
+    }
+
+    // Then download them
+    const result = await client.downloadAllThemes(themesResult.data, tempDir)
+      .toResult();
+
+    assertEquals(result.isOk(), true);
+    if (result.isOk()) {
+      // Verify LICENSE file was downloaded with unique name
+      const licenseFilename = "LICENSE-alacritty-alacritty-theme";
+      const licensePath = `${tempDir}/${licenseFilename}`;
+
+      const licenseExists = await Deno.stat(licensePath).then(() => true)
+        .catch(() => false);
+
+      assertEquals(licenseExists, true, "LICENSE file should exist");
+
+      // Verify LICENSE content
+      const licenseContent = await Deno.readTextFile(licensePath);
+      assertEquals(licenseContent, mockLicenseContent);
+    }
+  } finally {
+    fetchStub.restore();
+    globalThis.fetch = originalFetch;
+    // Clean up temp directory
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test("GitHubClient: downloadAllThemes should try multiple LICENSE filenames", async () => {
+  const originalFetch = globalThis.fetch;
+  const tempDir = await Deno.makeTempDir();
+
+  const mockLicenseContent = "MIT License\n\nCopyright...";
+  const attemptedUrls: string[] = [];
+
+  // Mock fetch to return different responses based on URL
+  const fetchStub = stub(
+    globalThis,
+    "fetch",
+    (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      // Track attempted URLs
+      if (url.includes("LICENSE") || url.includes("license")) {
+        attemptedUrls.push(url);
+      }
+
+      // Return tree response for listThemes (API call)
+      if (url.includes("/git/trees/")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockTreeResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+
+      // Return raw content for monokai (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("monokai.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockMonokaiContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return raw content for dracula (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("dracula.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockDraculaContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return 404 for "LICENSE" and "LICENSE.md", but succeed for "LICENSE.txt"
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.endsWith("/LICENSE")
+      ) {
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }
+
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.endsWith("/LICENSE.md")
+      ) {
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }
+
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.endsWith("/LICENSE.txt")
+      ) {
+        return Promise.resolve(
+          new Response(mockLicenseContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    },
+  );
+
+  try {
+    const clientResult = createGitHubClient(
+      "https://github.com/alacritty/alacritty-theme",
+    );
+
+    if (!clientResult.isOk()) {
+      throw new Error("Failed to create client");
+    }
+
+    const client = clientResult.data;
+
+    // First list themes
+    const themesResult = await client.listThemes().toResult();
+    assertEquals(themesResult.isOk(), true);
+
+    if (!themesResult.isOk()) {
+      throw new Error("Failed to list themes");
+    }
+
+    // Then download them
+    const result = await client.downloadAllThemes(themesResult.data, tempDir)
+      .toResult();
+
+    assertEquals(result.isOk(), true);
+
+    // Verify that multiple LICENSE filenames were attempted
+    assertEquals(
+      attemptedUrls.length >= 3,
+      true,
+      "Should have tried multiple LICENSE filenames",
+    );
+    assertEquals(
+      attemptedUrls.some((url) => url.endsWith("/LICENSE")),
+      true,
+      "Should have tried LICENSE",
+    );
+    assertEquals(
+      attemptedUrls.some((url) => url.endsWith("/LICENSE.md")),
+      true,
+      "Should have tried LICENSE.md",
+    );
+    assertEquals(
+      attemptedUrls.some((url) => url.endsWith("/LICENSE.txt")),
+      true,
+      "Should have tried LICENSE.txt",
+    );
+
+    if (result.isOk()) {
+      // Verify LICENSE file was downloaded with unique name
+      const licenseFilename = "LICENSE-alacritty-alacritty-theme";
+      const licensePath = `${tempDir}/${licenseFilename}`;
+
+      const licenseExists = await Deno.stat(licensePath).then(() => true)
+        .catch(() => false);
+
+      assertEquals(licenseExists, true, "LICENSE file should exist");
+
+      // Verify LICENSE content
+      const licenseContent = await Deno.readTextFile(licensePath);
+      assertEquals(licenseContent, mockLicenseContent);
+    }
+  } finally {
+    fetchStub.restore();
+    globalThis.fetch = originalFetch;
+    // Clean up temp directory
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+Deno.test("GitHubClient: downloadAllThemes should succeed when no LICENSE file exists", async () => {
+  const originalFetch = globalThis.fetch;
+  const tempDir = await Deno.makeTempDir();
+
+  // Mock fetch to return different responses based on URL
+  const fetchStub = stub(
+    globalThis,
+    "fetch",
+    (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+
+      // Return tree response for listThemes (API call)
+      if (url.includes("/git/trees/")) {
+        return Promise.resolve(
+          new Response(JSON.stringify(mockTreeResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+
+      // Return raw content for monokai (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("monokai.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockMonokaiContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return raw content for dracula (raw.githubusercontent.com)
+      if (
+        url.includes("raw.githubusercontent.com") &&
+        url.includes("dracula.toml")
+      ) {
+        return Promise.resolve(
+          new Response(mockDraculaContent, {
+            status: 200,
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
+          }),
+        );
+      }
+
+      // Return 404 for all LICENSE attempts
+      return Promise.resolve(new Response("Not Found", { status: 404 }));
+    },
+  );
+
+  try {
+    const clientResult = createGitHubClient(
+      "https://github.com/alacritty/alacritty-theme",
+    );
+
+    if (!clientResult.isOk()) {
+      throw new Error("Failed to create client");
+    }
+
+    const client = clientResult.data;
+
+    // First list themes
+    const themesResult = await client.listThemes().toResult();
+    assertEquals(themesResult.isOk(), true);
+
+    if (!themesResult.isOk()) {
+      throw new Error("Failed to list themes");
+    }
+
+    // Then download them - should succeed even without LICENSE
+    const result = await client.downloadAllThemes(themesResult.data, tempDir)
+      .toResult();
+
+    assertEquals(
+      result.isOk(),
+      true,
+      "Should succeed even when no LICENSE file exists",
+    );
+
+    if (result.isOk()) {
+      // Verify LICENSE file was NOT created
+      const licenseFilename = "LICENSE-alacritty-alacritty-theme";
+      const licensePath = `${tempDir}/${licenseFilename}`;
+
+      const licenseExists = await Deno.stat(licensePath).then(() => true)
+        .catch(() => false);
+
+      assertEquals(
+        licenseExists,
+        false,
+        "LICENSE file should not exist when not found in repo",
+      );
+    }
+  } finally {
+    fetchStub.restore();
+    globalThis.fetch = originalFetch;
+    // Clean up temp directory
+    await Deno.remove(tempDir, { recursive: true });
+  }
+});

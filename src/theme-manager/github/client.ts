@@ -183,7 +183,9 @@ class GitHubClient {
    * Downloads all TOML theme files from the repository to the specified output directory.
    *
    * This method downloads each theme file sequentially from raw.githubusercontent.com, which is not
-   * subject to API rate limits.
+   * subject to API rate limits. It also downloads the repository's LICENSE file to preserve
+   * proper attribution, naming it uniquely to avoid conflicts when downloading from multiple
+   * repositories.
    *
    * If the output directory doesn't exist, it will be created.
    *
@@ -232,7 +234,7 @@ class GitHubClient {
     outputPath: FilePath,
     onProgress?: (current: number, total: number) => void,
   ): ResultAsync<Theme[], GitHubClientError> {
-    // Download themes sequentially
+    // Download themes sequentially, then download the LICENSE file
     return ResultAsync.fromPromise(
       this.downloadThemesSequentially(
         themes,
@@ -240,7 +242,10 @@ class GitHubClient {
         onProgress,
       ),
       (error) => new FileDownloadError("multiple files", { cause: error }),
-    );
+    ).flatMap((downloadedThemes) => {
+      // Download the LICENSE file after all themes are downloaded
+      return this.downloadLicense(outputPath).map(() => downloadedThemes);
+    });
   }
 
   /**
@@ -279,6 +284,153 @@ class GitHubClient {
     }
 
     return downloadedThemes;
+  }
+
+  /**
+   * Downloads the LICENSE file from the repository to the specified output directory.
+   *
+   * The LICENSE file is saved with a unique name based on the repository owner and name
+   * to avoid conflicts when downloading themes from multiple repositories.
+   * For example, the LICENSE from alacritty/alacritty-theme will be saved as
+   * "LICENSE-alacritty-alacritty-theme".
+   *
+   * This method tries multiple common license file naming conventions in order:
+   * - LICENSE
+   * - LICENSE.md
+   * - LICENSE.txt
+   * - license
+   * - license.md
+   * - license.txt
+   *
+   * If none of these files exist in the repository, this method will silently succeed
+   * without downloading anything, as some repositories may not have a LICENSE file
+   * in the root directory.
+   *
+   * @param outputPath - Local directory path where the LICENSE should be saved
+   * @returns A ResultAsync that resolves when the LICENSE is downloaded or an error
+   *
+   * @example
+   * ```typescript
+   * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
+   * const result = await client.downloadLicense("./my-themes").toResult();
+   *
+   * if (result.isOk()) {
+   *   console.log("LICENSE file downloaded successfully");
+   * } else {
+   *   console.error("Failed to download LICENSE:", result.error);
+   * }
+   * ```
+   */
+  private downloadLicense(
+    outputPath: FilePath,
+  ): ResultAsync<void, GitHubClientError> {
+    // Common license file naming conventions, in order of preference
+    const licenseFilenames = [
+      "LICENSE",
+      "LICENSE.md",
+      "LICENSE.txt",
+      "license",
+      "license.md",
+      "license.txt",
+    ];
+
+    return this.ensureDirectory(outputPath)
+      .flatMap(() =>
+        this.tryDownloadLicenseFiles(licenseFilenames, outputPath)
+      );
+  }
+
+  /**
+   * Attempts to download license files by trying multiple filenames in order.
+   *
+   * This method tries each filename in the provided array until one is successfully
+   * downloaded. If all attempts result in 404 errors, it silently succeeds. Any other
+   * error is propagated.
+   *
+   * @param filenames - Array of license filenames to try
+   * @param outputPath - Local directory path where the LICENSE should be saved
+   * @returns A ResultAsync that resolves when a LICENSE is downloaded or all attempts fail with 404
+   */
+  private tryDownloadLicenseFiles(
+    filenames: string[],
+    outputPath: FilePath,
+  ): ResultAsync<void, GitHubClientError> {
+    return new ResultAsync(
+      this.tryDownloadLicenseFilesSequentially(filenames, outputPath),
+    );
+  }
+
+  /**
+   * Helper method to try downloading license files sequentially using a loop.
+   *
+   * This method iterates through each filename in the array. If a download succeeds,
+   * it returns Ok. If a 404 is encountered, it tries the next filename. Any other
+   * error is propagated immediately.
+   *
+   * @param filenames - Array of license filenames to try
+   * @param outputPath - Local directory path where the LICENSE should be saved
+   * @returns A Promise<Result> that resolves when a LICENSE is downloaded or all attempts fail
+   */
+  private async tryDownloadLicenseFilesSequentially(
+    filenames: string[],
+    outputPath: FilePath,
+  ): Promise<Result<void, GitHubClientError>> {
+    for (const filename of filenames) {
+      const url =
+        `${this.rawBaseUrl}/${this.owner}/${this.repo}/refs/heads/${this.ref}/${filename}`;
+
+      const fetchResult = await ResultAsync.fromPromise(
+        fetch(url),
+        (error) => new FileDownloadError(url, { cause: error }),
+      ).toResult();
+
+      if (fetchResult.isErr()) {
+        return fetchResult;
+      }
+
+      const response = fetchResult.data;
+
+      // If 404, try next filename
+      if (response.status === 404) {
+        continue;
+      }
+
+      // Other HTTP errors should fail
+      if (!response.ok) {
+        return Result.err(
+          new FileDownloadError(url, {
+            cause: new Error(
+              `HTTP ${response.status}: ${response.statusText}`,
+            ),
+          }),
+        );
+      }
+
+      // Download and save the file
+      const contentResult = await ResultAsync.fromPromise(
+        response.text(),
+        (error) => new FileDownloadError(url, { cause: error }),
+      ).toResult();
+
+      if (contentResult.isErr()) {
+        return contentResult;
+      }
+
+      // Create a unique filename based on repository owner and name
+      const uniqueFilename = `LICENSE-${this.owner}-${this.repo}`;
+      const localPath = join(outputPath, uniqueFilename);
+
+      // Write LICENSE file to disk
+      const writeResult = await ResultAsync.fromPromise(
+        Deno.writeTextFile(localPath, contentResult.data),
+        (error) => new FileWriteError(localPath, { cause: error }),
+      ).toResult();
+
+      return writeResult;
+    }
+
+    // All filenames tried, none found - silently succeed
+    return Result.ok(undefined);
   }
 
   /**

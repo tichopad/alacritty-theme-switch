@@ -45,6 +45,10 @@ if (args.command === "download-themes") {
       downloadedThemes.forEach((theme) => {
         console.log(` - ${theme.label}`);
       });
+      console.log(
+        `\n💙 These themes are made possible by the open-source community.`,
+      );
+      console.log(`   Consider supporting the authors at ${bold(args.url)}`);
       Deno.exit(0);
     },
     (error) => {
