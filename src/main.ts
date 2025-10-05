@@ -8,6 +8,7 @@ import {
   underscore,
 } from "./cli.ts";
 import { downloadThemesCommand } from "./commands/download-themes.ts";
+import { ResultAsync } from "./result.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);
@@ -93,35 +94,43 @@ if (args.select !== undefined) {
 
 // Else prompt user to select a theme
 const themes = manager.listThemes();
-const selectedTheme = await search({
-  message: "Select Alacritty color theme",
-  source: (input) => {
-    return themes
-      .filter((theme) => {
-        return input
-          ? theme.label.toLowerCase().includes(input.toLowerCase())
-          : true;
-      })
-      .map((theme) => {
-        return {
-          name: theme.isCurrentlyActive
-            ? underscore(bold(theme.label) + " ✨")
-            : theme.label,
-          value: theme,
-        };
-      });
-  },
-});
 
-// And apply it
-await manager.applyTheme(selectedTheme).match(
-  (appliedTheme) => {
-    console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
-    Deno.exit(0);
-  },
-  (error) => {
-    console.log("Failed to apply theme! ❌");
-    console.error(error);
-    Deno.exit(1);
-  },
-);
+await ResultAsync.fromPromise(
+  search({
+    message: "Select Alacritty color theme",
+    source: (input) => {
+      return themes
+        .filter((theme) => {
+          return input
+            ? theme.label.toLowerCase().includes(input.toLowerCase())
+            : true;
+        })
+        .map((theme) => {
+          return {
+            name: theme.isCurrentlyActive
+              ? underscore(bold(theme.label) + " ✨")
+              : theme.label,
+            value: theme,
+          };
+        });
+    },
+  }),
+  (error) => error,
+)
+  .flatMap((selectedTheme) => manager.applyTheme(selectedTheme))
+  .match(
+    (appliedTheme) => {
+      console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
+      Deno.exit(0);
+    },
+    (error) => {
+      // Handle Ctrl+C gracefully
+      if (error instanceof Error && error.name === "ExitPromptError") {
+        console.log("\nExiting...");
+        Deno.exit(0);
+      }
+      console.log("Failed to apply theme! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );

@@ -62,10 +62,10 @@ to your themes directory (`~/.config/alacritty/themes` by default).
 
 **Note:** The default theme repository
 ([alacritty/alacritty-theme](https://github.com/alacritty/alacritty-theme)) is
-licensed under the Apache License 2.0. When you download themes, the repository's
-LICENSE file is also downloaded to preserve proper attribution. If you download
-themes from multiple repositories, each repository's license will be saved
-separately to avoid conflicts.
+licensed under the Apache License 2.0. When you download themes, the
+repository's LICENSE file is also downloaded to preserve proper attribution. If
+you download themes from multiple repositories, each repository's license will
+be saved separately to avoid conflicts.
 
 You can customize the download with these options:
 
