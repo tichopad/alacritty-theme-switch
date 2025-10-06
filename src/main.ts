@@ -94,10 +94,18 @@ if (args.select !== undefined) {
 
 // Else prompt user to select a theme
 const themes = manager.listThemes();
+const activeTheme = themes.find((t) => t.isCurrentlyActive);
 
 await ResultAsync.fromPromise(
   search({
-    message: "Select Alacritty color theme",
+    message: activeTheme
+      ? `Select Alacritty color theme (current: ${activeTheme.label})`
+      : `Select Alacritty color theme`,
+    instructions: {
+      navigation: "Use arrow keys to navigate (or type to search)",
+      pager: "Use space to select and enter to confirm",
+    },
+    pageSize: 10,
     source: (input) => {
       return themes
         .filter((theme) => {

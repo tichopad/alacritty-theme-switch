@@ -1,0 +1,3 @@
+- [ ] Install script for the binary distribution
+- [ ] Clear all themes command?
+- [ ] Release to Homebrew?
