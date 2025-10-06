@@ -15,7 +15,8 @@ import type {
   GitHubClientError,
   InvalidRepositoryUrlError,
 } from "../theme-manager/github/errors.ts";
-import type { FilePath, Theme } from "../theme-manager/types.ts";
+import type { Theme } from "../theme-manager/theme.ts";
+import type { FilePath } from "../theme-manager/types.ts";
 
 /**
  * Options for the download-themes command.

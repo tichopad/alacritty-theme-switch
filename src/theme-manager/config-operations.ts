@@ -1,6 +1,5 @@
 import { copy } from "@std/fs/copy";
 import { walk } from "@std/fs/walk";
-import { parse } from "@std/toml/parse";
 import { stringify } from "@std/toml/stringify";
 import { Result, ResultAsync } from "../result.ts";
 import {
@@ -19,8 +18,9 @@ import {
   ThemeNotTOMLError,
   WriteError,
 } from "./errors.ts";
-import type { Config, FilePath, Theme } from "./types.ts";
-import { isToml, unslugify } from "./utils.ts";
+import { Theme } from "./theme.ts";
+import type { Config, FilePath } from "./types.ts";
+import { isToml, safeParseToml } from "./utils.ts";
 
 /**
  * Creates a backup copy of the configuration file.
@@ -82,33 +82,44 @@ export function checkThemeExists(filename: string, allThemes: Theme[]) {
 
 /**
  * Discovers and loads all TOML theme files from the specified directory.
+ * Detects the brightness (light/dark) of each theme by parsing its content.
+ *
+ * If any theme file cannot be read or parsed, the entire operation fails with
+ * an error indicating which file caused the problem.
  */
 export function loadThemes(themeDirPath: FilePath) {
   return validateDir(themeDirPath).flatMap(() => {
-    return walkThemes(themeDirPath).flatMap((themes) => {
-      if (themes.length === 0) {
-        return Result.err(new NoThemesFoundError(themeDirPath));
-      }
+    return walkThemes(themeDirPath).flatMap(
+      async (themes): Promise<Result<Theme[], LoadThemesError>> => {
+        if (themes.length === 0) {
+          return Result.err(new NoThemesFoundError(themeDirPath));
+        }
 
-      const mappedThemes = themes.map((theme): Theme => ({
-        path: theme.path,
-        label: unslugify(theme.name),
-        isCurrentlyActive: null,
-      }));
+        // Parse each theme file to create Theme instances
+        const parseResults = await Promise.all(
+          themes.map(async (theme) => {
+            const parseResult = await safeParseToml(theme.path).toResult();
+            return parseResult.map((themeContent) =>
+              new Theme(theme.path, themeContent, null)
+            );
+          }),
+        );
 
-      return Result.ok(mappedThemes);
-    });
+        // Check if any parsing failed - fail fast on first error
+        const firstError = parseResults.find((result) => result.isErr());
+        if (firstError?.isErr()) {
+          return Result.err(firstError.error);
+        }
+
+        // All succeeded, extract the themes
+        const themeInstances = parseResults
+          .filter((result): result is Result<Theme, never> => result.isOk())
+          .map((result) => result.data);
+
+        return Result.ok(themeInstances);
+      },
+    );
   });
-}
-
-/**
- * Safely reads and parses a TOML file.
- */
-function safeParseToml(path: FilePath) {
-  return ResultAsync.fromPromise(
-    Deno.readTextFile(path).then(parse),
-    (error) => new FileNotReadableError(path, { cause: error }),
-  );
 }
 
 /**

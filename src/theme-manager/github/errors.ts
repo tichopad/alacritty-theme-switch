@@ -2,6 +2,8 @@
  * Module for defining custom error types for the GitHub client.
  */
 
+import type { TomlParseError } from "../errors.ts";
+
 /**
  * Error thrown when a repository URL format is invalid.
  */
@@ -92,4 +94,5 @@ export type GitHubClientError =
   | FileDownloadError
   | FileWriteError
   | DirectoryCreateError
-  | ThemeNotFoundInRepoError;
+  | ThemeNotFoundInRepoError
+  | TomlParseError;

@@ -109,15 +109,37 @@ await ResultAsync.fromPromise(
     source: (input) => {
       return themes
         .filter((theme) => {
-          return input
-            ? theme.label.toLowerCase().includes(input.toLowerCase())
-            : true;
+          if (!input) {
+            return true;
+          }
+          if (theme.label.toLowerCase().includes(input.toLowerCase())) {
+            return true;
+          }
+          if (theme.brightness === "dark" && input.includes("dark")) {
+            return true;
+          }
+          if (theme.brightness === "light" && input.includes("light")) {
+            return true;
+          }
+          return false;
+        })
+        .sort((a, b) => {
+          // Sort by brightness first (dark before light)
+          if (a.brightness !== b.brightness) {
+            return a.brightness === "dark" ? -1 : 1;
+          }
+          // Then sort alphabetically by label
+          return a.label.localeCompare(b.label, undefined, { numeric: true });
         })
         .map((theme) => {
+          // Add brightness indicator to theme name
+          const brightnessIcon = theme.brightness === "light" ? "☀️ " : "🌙";
+          const themeName = `${brightnessIcon} ${theme.label}`;
+
           return {
             name: theme.isCurrentlyActive
-              ? underscore(bold(theme.label) + " ✨")
-              : theme.label,
+              ? underscore(bold(themeName) + " ✨")
+              : themeName,
             value: theme,
           };
         });

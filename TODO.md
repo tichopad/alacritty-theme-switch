@@ -1,3 +1,4 @@
 - [ ] Install script for the binary distribution
+- [ ] Employ arktype
 - [ ] Clear all themes command?
 - [ ] Release to Homebrew?

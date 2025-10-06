@@ -1,8 +1,9 @@
 import { ensureDir } from "@std/fs/ensure-dir";
 import { basename, join } from "@std/path";
 import { Result, ResultAsync } from "../../result.ts";
-import type { FilePath, Theme } from "../types.ts";
-import { unslugify } from "../utils.ts";
+import { Theme } from "../theme.ts";
+import type { FilePath } from "../types.ts";
+import { safeParseTomlContent } from "../utils.ts";
 import {
   DirectoryCreateError,
   FileDownloadError,
@@ -117,12 +118,9 @@ class GitHubClient {
           (item) => item.type === "blob" && item.path.endsWith(".toml"),
         );
 
-        // Convert to Theme objects
-        return tomlFiles.map((file): Theme => ({
-          path: file.path,
-          label: unslugify(basename(file.path)),
-          isCurrentlyActive: null,
-        }));
+        // Convert to Theme instances
+        // Note: brightness defaults to "dark" since we haven't downloaded the files yet
+        return tomlFiles.map((file) => new Theme(file.path, {}, null));
       });
   }
 
@@ -163,19 +161,21 @@ class GitHubClient {
 
     return this.ensureDirectory(outputPath)
       .flatMap(() => this.fetchRawContent(url))
-      .flatMap((content) => {
+      .flatMap((content): ResultAsync<Theme, GitHubClientError> => {
         const filename = basename(remotePath);
         const localPath = join(outputPath, filename);
 
-        // Write file to disk
-        return ResultAsync.fromPromise(
-          Deno.writeTextFile(localPath, content),
-          (error) => new FileWriteError(localPath, { cause: error }),
-        ).map((): Theme => ({
-          path: localPath,
-          label: unslugify(filename),
-          isCurrentlyActive: null,
-        }));
+        // Parse theme content and convert Result to ResultAsync
+        return ResultAsync.fromResult(safeParseTomlContent(content))
+          .flatMap((themeContent) => {
+            // Write file to disk
+            return ResultAsync.fromPromise(
+              Deno.writeTextFile(localPath, content),
+              (error) => new FileWriteError(localPath, { cause: error }),
+            ).map(() => {
+              return new Theme(localPath, themeContent, null);
+            });
+          });
       });
   }
 

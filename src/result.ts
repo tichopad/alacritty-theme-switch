@@ -109,6 +109,36 @@ export class Result<T, E> {
   }
 
   /**
+   * Attempts to execute the provided function and wraps its result in a Result.
+   * If the function throws an error, it is caught and wrapped in an Err result.
+   *
+   * @template T - The type of the success value
+   * @template E - The type of the error value (defaults to Error)
+   * @param f - The function to execute
+   * @param errorMapper - Optional function to transform caught errors into the desired error type
+   * @returns A Result containing the function's return value or the caught error
+   * @example
+   * ```typescript
+   * const result = Result.try(() => {
+   *   // Some operation that might throw an error
+   *   throw new Error("Something went wrong");
+   * });
+   * console.log(result.isErr()); // true
+   * console.log(result.error); // Error: "Something went wrong"
+   * ```
+   */
+  static try<T, E = Error>(
+    f: () => T,
+    errorMapper?: (error: unknown) => E,
+  ): Result<T, E> {
+    try {
+      return Result.ok(f());
+    } catch (error) {
+      return Result.err(errorMapper ? errorMapper(error) : error as E);
+    }
+  }
+
+  /**
    * Type guard to check if this Result is a successful Ok variant.
    * This method narrows the type to Ok<T> when it returns true.
    *

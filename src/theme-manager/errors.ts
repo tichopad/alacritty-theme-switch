@@ -116,6 +116,15 @@ export class FileIsDirectoryError extends Error {
   }
 }
 
+export class TomlParseError extends Error {
+  readonly _tag = "TomlParseError";
+  content: string;
+  constructor(content: string, options?: ErrorOptions) {
+    super(`Failed to parse TOML content.`, options);
+    this.content = content;
+  }
+}
+
 export type ParseConfigError =
   | FileNotFoundError
   | FileNotReadableError
@@ -131,4 +140,5 @@ export type LoadThemesError =
   | DirectoryIsFileError
   | DirectoryNotDirectoryError
   | DirectoryNotAccessibleError
-  | NoThemesFoundError;
+  | NoThemesFoundError
+  | FileNotReadableError;
