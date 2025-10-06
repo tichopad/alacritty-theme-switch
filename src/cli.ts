@@ -3,6 +3,8 @@ import { join } from "@std/path/join";
 import denoJson from "../deno.json" with { type: "json" };
 import type { FilePath } from "./theme-manager/types.ts";
 
+type PositionalCommand = "download-themes" | "clear-themes";
+
 type Args = {
   // Flags
   /** Show help */
@@ -26,7 +28,7 @@ type Args = {
   ref: string;
   // Commands
   /** Subcommand to execute */
-  command?: "download-themes";
+  command?: PositionalCommand;
   // Rest
   /** Positional arguments */
   _: Array<string | number>;
@@ -80,7 +82,30 @@ export function getArgs(
     };
   }
 
+  if (typeof firstArg === "string" && firstArg === "clear-themes") {
+    return {
+      ...parsed,
+      command: "clear-themes",
+    };
+  }
+
   return parsed;
+}
+
+export function parsePositionalCommand(
+  positionalArgs: Array<string | number>,
+): PositionalCommand | undefined {
+  const firstArg = positionalArgs?.[0];
+
+  if (typeof firstArg === "string" && firstArg === "download-themes") {
+    return "download-themes";
+  }
+
+  if (typeof firstArg === "string" && firstArg === "clear-themes") {
+    return "clear-themes";
+  }
+
+  return undefined;
 }
 
 /**
@@ -92,9 +117,11 @@ export function printHelp() {
       `Usage:\n` +
       `  ats [options]                    Interactive theme selection\n` +
       `  ats download-themes [options]    Download themes from GitHub repository\n` +
+      `  ats clear-themes [options]       Delete all themes from themes directory\n` +
       `\n` +
       `Commands:\n` +
       `  download-themes  Download themes from a GitHub repository\n` +
+      `  clear-themes     Delete all theme files from the themes directory\n` +
       `\n` +
       `Options:\n` +
       `  -h, --help                 Show this help message and exit.\n` +

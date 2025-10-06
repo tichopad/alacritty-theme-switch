@@ -1,5 +1,11 @@
 import { assertEquals } from "@std/assert";
-import { bold, getArgs, getHomeDir, underscore } from "../../src/cli.ts";
+import {
+  bold,
+  getArgs,
+  getHomeDir,
+  parsePositionalCommand,
+  underscore,
+} from "../../src/cli.ts";
 
 // Mock environment for testing getHomeDir function
 const originalEnv = {
@@ -367,4 +373,28 @@ Deno.test("getArgs: download-themes command with custom url and ref", () => {
   assertEquals(args.command, "download-themes");
   assertEquals(args.url, "https://github.com/custom/repo");
   assertEquals(args.ref, "develop");
+});
+
+// Tests for clear-themes command
+Deno.test("getArgs: clear-themes command", () => {
+  const args = getArgs(["clear-themes"], "/home/user", "linux");
+
+  assertEquals(args.command, "clear-themes");
+});
+
+Deno.test("getArgs: clear-themes command with custom themes directory", () => {
+  const args = getArgs(
+    ["clear-themes", "-t", "/custom/themes"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "clear-themes");
+  assertEquals(args.themes, "/custom/themes");
+});
+
+Deno.test("parsePositionalCommand: recognizes clear-themes", () => {
+  const command = parsePositionalCommand(["clear-themes"]);
+
+  assertEquals(command, "clear-themes");
 });

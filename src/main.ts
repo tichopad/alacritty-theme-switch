@@ -7,6 +7,7 @@ import {
   printVersion,
   underscore,
 } from "./cli.ts";
+import { clearThemesCommand } from "./commands/clear-themes.ts";
 import { downloadThemesCommand } from "./commands/download-themes.ts";
 import { ResultAsync } from "./result.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
@@ -54,6 +55,28 @@ if (args.command === "download-themes") {
     },
     (error) => {
       console.error("Failed to download themes! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );
+}
+
+// Handle clear-themes subcommand
+if (args.command === "clear-themes") {
+  console.log(`Clearing all themes from ${bold(args.themes)}...`);
+  console.log();
+
+  await clearThemesCommand({
+    themesPath: args.themes,
+  }).match(
+    (deletedCount) => {
+      console.log(
+        `\nSuccessfully deleted ${bold(deletedCount.toString())} theme(s) ✅`,
+      );
+      Deno.exit(0);
+    },
+    (error) => {
+      console.error("Failed to clear themes! ❌");
       console.error(error);
       Deno.exit(1);
     },
