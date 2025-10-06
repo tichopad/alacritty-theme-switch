@@ -1,180 +1,194 @@
 # alacritty-theme-switch
 
-> CLI utility for [Alacritty](https://github.com/jwilm/alacritty) color theme
-> and configuration switching
+`alacritty-theme-switch` is a CLI tool for switching color themes in the [Alacritty](https://github.com/alacritty/alacritty) terminal emulator.
+It lets you store multiple theme configurations and switch between them interactively or programmatically.
 
-See `ats --help` for basic information.
+## Features
 
-The CLI utility allows to save multiple Alacritty configuration files, which can
-contain only a subset of Alacritty configuration options (e.g. colors, fonts)
-inside a directory. The intended usage is dynamically switching between multiple
-color themes (hence the name), but it can be used with any configuration
-options.
+- **Interactive theme selection** with fuzzy search
+- **Download themes** directly from GitHub repositories
+- **Automatic backups** of your configuration before each switch
+- **Non-destructive merging** of theme files with your main config
+- **Cross-platform** support (Linux, macOS, Windows)
 
-Executing `ats` then shows a list of all these files and allows you to select
-one. The selected configuration is then merged with the main Alacritty
-configuration file and saved.
+## Quick start
 
-The main configuration file is backed up before every merge.
+Install the tool:
 
-**Please note, that all comments inside the main configuration file are removed
-upon switch.**
+```bash
+# Via npm
+npm install -g alacritty-theme-switch
 
-# Installation
+# Via JSR (Deno)
+deno install -g -A -n ats jsr:@tichopad/alacritty-theme-switch
+```
 
-Run
-
-`npm i -g alacritty-theme-switch@latest`
-
-inside your terminal.
-
-# Configuration
-
-The utility can be configured by passing additional flags/parameters:
-
-1. `--config` or `-c` Path to the alacritty's configuration file
-   - E.g.: `ats --config ~/.config/alacritty/alacritty.toml`
-   - Default: `$HOME/.config/alacritty/alacritty.toml`
-2. `--themes` or `-t` Path to the directory containing custom themes' files
-   - E.g.: `ats --themes ~/alacritty-themes`
-   - Default: `$HOME/.config/alacritty/themes`
-3. `--backup` or `-b` Path to the alacritty's configuration file backup made
-   before every switch
-   - E.g.: `ats --backup ~/backup/alacritty.backup.toml`
-   - Default: `$HOME/.config/alacritty/alacritty.theme-switch-backup.toml`
-4. `--select` or `-s` Path (relative to themes' directory) to a single
-   configuration file that should be used directly instead of prompting a select
-
-# Usage
-
-## Quick Start: Download Themes
-
-The easiest way to get started is to download themes from the official Alacritty
-themes repository:
+Download themes from the official repository:
 
 ```bash
 ats download-themes
 ```
 
-This will download all themes from the
-[official Alacritty themes repository](https://github.com/alacritty/alacritty-theme)
-to your themes directory (`~/.config/alacritty/themes` by default).
-
-**Note:** The default theme repository
-([alacritty/alacritty-theme](https://github.com/alacritty/alacritty-theme)) is
-licensed under the Apache License 2.0. When you download themes, the
-repository's LICENSE file is also downloaded to preserve proper attribution. If
-you download themes from multiple repositories, each repository's license will
-be saved separately to avoid conflicts.
-
-You can customize the download with these options:
-
-- `--url` or `-u`: GitHub repository URL to download themes from (default:
-  `https://github.com/alacritty/alacritty-theme`)
-- `--themes` or `-t`: Local directory where themes should be saved (default:
-  `~/.config/alacritty/themes`)
-
-Example:
+Switch themes interactively:
 
 ```bash
-# Download themes from a custom repository
-ats download-themes --url https://github.com/custom/themes-repo
-
-# Download themes to a custom directory
-ats download-themes --themes ~/my-alacritty-themes
+ats
 ```
 
-## Manual Setup
+## Installation
 
-### 1) Create folder for your color themes
+### Via npm
 
-The folder is in `~/.config/alacritty/themes/` by default, but can be set by
-using `--themes` parameter.
-
-Example:
-
-```
-.
-├── alacritty
-│   ├── alacritty.yml
-│   └── themes
+```bash
+npm install -g alacritty-theme-switch
 ```
 
-### 2) Add color theme file
+### Via JSR (Deno)
 
-Create new TOML file in your color themes directory.
-
-Write your color theme configuration to the file or copy/paste anything from the
-[official repository themes list](https://github.com/alacritty/alacritty/wiki/Color-schemes).
-
-You can add as many files as you want.
-
-Example:
-
-```
-.
-├── alacritty
-│   ├── alacritty.yml
-│   └── themes
-│       └── monokai.yml
+```bash
+deno install -g -A -n ats jsr:@tichopad/alacritty-theme-switch
 ```
 
-_monokai.toml:_
+## How to use
 
+### Download themes
+
+The easiest way to get started is to download themes from a GitHub repository:
+
+```bash
+ats download-themes
 ```
+
+This downloads all themes from the [official Alacritty themes repository](https://github.com/alacritty/alacritty-theme) to `~/.config/alacritty/themes` (or `%APPDATA%\alacritty\themes` on Windows).
+
+**License notice:** When downloading themes, the repository's LICENSE file is also downloaded to preserve proper attribution. The default repository ([alacritty/alacritty-theme](https://github.com/alacritty/alacritty-theme)) is licensed under the Apache License 2.0. If you download from multiple repositories, each license is saved separately to avoid conflicts.
+
+Download from a custom repository:
+
+```bash
+ats download-themes --url https://github.com/user/custom-themes
+```
+
+Download to a custom directory:
+
+```bash
+ats download-themes --themes ~/my-themes
+```
+
+Download from a specific branch or tag:
+
+```bash
+ats download-themes --ref v1.0.0
+```
+
+### Switch themes interactively
+
+Run `ats` to open an interactive theme selector:
+
+```bash
+ats
+```
+
+Use arrow keys or type to search, then press Enter to apply a theme. The currently active theme is highlighted.
+
+### Switch themes programmatically
+
+Apply a specific theme without prompting:
+
+```bash
+ats --select monokai.toml
+```
+
+The `--select` option takes a filename relative to your themes directory.
+
+### Create custom themes
+
+Create a TOML file in your themes directory (`~/.config/alacritty/themes` by default):
+
+```toml
+# ~/.config/alacritty/themes/my-theme.toml
+
 [colors.primary]
-background = '0x272822'
-foreground = '0xF8F8F2'
+background = '#272822'
+foreground = '#F8F8F2'
 
 [colors.normal]
-black = '0x272822'
-red = '0xF92672'
-green = '0xA6E22E'
-yellow = '0xF4BF75'
-blue = '0x66D9EF'
-magenta = '0xAE81FF'
-cyan = '0xA1EFE4'
-white = '0xF8F8F2'
+black   = '#272822'
+red     = '#F92672'
+green   = '#A6E22E'
+yellow  = '#F4BF75'
+blue    = '#66D9EF'
+magenta = '#AE81FF'
+cyan    = '#A1EFE4'
+white   = '#F8F8F2'
 
 [colors.bright]
-black = '0x75715E'
-red = '0xF92672'
-green = '0xA6E22E'
-yellow = '0xF4BF75'
-blue = '0x66D9EF'
-magenta = '0xAE81FF'
-cyan = '0xA1EFE4'
-white = '0xF9F8F5'
+black   = '#75715E'
+red     = '#F92672'
+green   = '#A6E22E'
+yellow  = '#F4BF75'
+blue    = '#66D9EF'
+magenta = '#AE81FF'
+cyan    = '#A1EFE4'
+white   = '#F9F8F5'
 ```
 
-## Switching Themes
+Theme files can contain any valid Alacritty configuration options, not just colors.
 
-### 1) Run `alacritty-theme-switch` or `ats`
+## Configuration
 
-### 2) Select theme and hit Enter
+Customize paths and behavior with command-line options:
 
 ```
-? Select Alacritty color theme: (Use arrow keys)
-  Argonaut
-  Ayu Dark (last selected)
-❯ Monokai
+Options:
+  -c, --config <path>    Path to Alacritty config file
+                         (default: ~/.config/alacritty/alacritty.toml)
+  -t, --themes <path>    Path to themes directory
+                         (default: ~/.config/alacritty/themes)
+  -b, --backup <path>    Path to backup file
+                         (default: ~/.config/alacritty/alacritty.bak.toml)
+  -s, --select <file>    Apply theme without prompting
+  -h, --help             Show help
+  -v, --version          Show version
 ```
 
-# Last selected theme
+On Windows, the default config directory is `%APPDATA%\alacritty` instead of `~/.config/alacritty`.
 
-After a theme is applied, it's name is saved to a file named `.selected_theme`
-inside the themes directory. This information is then used to keep track of the
-last selected theme.
+### Examples
 
-If you manually change the alacritty colors configuration or rename the last
-selected theme's configuration file, the information will be lost.
+Use a custom config location:
 
-# OS support
+```bash
+ats --config ~/dotfiles/alacritty.toml
+```
 
-This hasn't been tested on Windows and OS X yet. There'll probably be issues
-with default settings, as it's looking for the `$HOME/.config/alacritty` folder,
-but after setting the `--config`, `--themes` and `--backup` flags, it should
-work just fine.
+Use a custom themes directory:
 
-Create an issue or pull request if you want to add out-of-the-box support for
-your platform of choice.
+```bash
+ats --themes ~/my-alacritty-themes
+```
+
+## How it works
+
+When you apply a theme, `alacritty-theme-switch`:
+
+1. Creates a backup of your current Alacritty config
+2. Reads your main config file and the selected theme file
+3. Merges the theme into your config (theme values override existing values)
+4. Writes the merged config back to your main config file
+5. Saves the theme name to `.selected_theme` for tracking
+
+**Note:** Comments in your main config file are removed during the merge process due to TOML parsing limitations.
+
+## Platform support
+
+The tool works on Linux, macOS, and Windows. Default paths are platform-specific:
+
+- **Linux/macOS**: `~/.config/alacritty/`
+- **Windows**: `%APPDATA%\alacritty\`
+
+You can override defaults with command-line options on any platform.
+
+## License
+
+MIT
