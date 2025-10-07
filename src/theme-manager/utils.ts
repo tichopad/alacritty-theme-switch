@@ -1,5 +1,6 @@
 import { parse } from "@std/toml/parse";
-import { Result, ResultAsync } from "../result.ts";
+import { Result } from "../no-exceptions/result.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
 import { FileNotReadableError, TomlParseError } from "./errors.ts";
 import type { FilePath } from "./types.ts";
 

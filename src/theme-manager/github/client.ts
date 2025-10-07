@@ -1,6 +1,7 @@
 import { ensureDir } from "@std/fs/ensure-dir";
 import { basename, join } from "@std/path";
-import { Result, ResultAsync } from "../../result.ts";
+import { Result } from "../../no-exceptions/result.ts";
+import { ResultAsync } from "../../no-exceptions/result-async.ts";
 import { Theme } from "../theme.ts";
 import type { FilePath } from "../types.ts";
 import { safeParseTomlContent } from "../utils.ts";

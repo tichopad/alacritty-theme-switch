@@ -3,6 +3,7 @@
   "version": "3.0.0-beta.9",
   "license": "MIT",
   "tasks": {
+    "fix": "deno fmt && deno lint",
     "check": "deno fmt --check && deno lint && deno check",
     "dev": "deno run --allow-write --allow-env --allow-read --allow-net --watch ./src/main.ts",
     "run": "deno run --allow-write --allow-env --allow-read --allow-net ./src/main.ts",

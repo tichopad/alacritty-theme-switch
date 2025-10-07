@@ -5,7 +5,7 @@
  */
 
 import { walk } from "@std/fs/walk";
-import { ResultAsync } from "../result.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
 import {
   DirectoryNotAccessibleError,
   NoThemesFoundError,

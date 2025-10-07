@@ -1,4 +1,4 @@
-import { Result } from "../result.ts";
+import { Result } from "../no-exceptions/result.ts";
 import {
   checkThemeExists,
   createBackup,

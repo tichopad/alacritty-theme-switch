@@ -9,7 +9,7 @@ import {
 } from "./cli.ts";
 import { clearThemesCommand } from "./commands/clear-themes.ts";
 import { downloadThemesCommand } from "./commands/download-themes.ts";
-import { ResultAsync } from "./result.ts";
+import { ResultAsync } from "./no-exceptions/result-async.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);

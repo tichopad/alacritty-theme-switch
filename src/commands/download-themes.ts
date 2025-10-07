@@ -9,7 +9,7 @@ import {
   ProgressBar,
   type ProgressBarFormatter,
 } from "@std/cli/unstable-progress-bar";
-import { ResultAsync } from "../result.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
 import { createGitHubClient } from "../theme-manager/github/client.ts";
 import type {
   GitHubClientError,

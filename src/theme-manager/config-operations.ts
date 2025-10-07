@@ -1,7 +1,8 @@
 import { copy } from "@std/fs/copy";
 import { walk } from "@std/fs/walk";
 import { stringify } from "@std/toml/stringify";
-import { Result, ResultAsync } from "../result.ts";
+import { Result } from "../no-exceptions/result.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
 import {
   BackupError,
   DirectoryIsFileError,
