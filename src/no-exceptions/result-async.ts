@@ -1,3 +1,5 @@
+// Any is useful for more complex generics
+// deno-lint-ignore-file no-explicit-any
 import { Result } from "./result.ts";
 
 /**
@@ -74,7 +76,81 @@ export class ResultAsync<T, E> {
     return new ResultAsync(Promise.resolve(Result.err(error)));
   }
 
-  // IMPLEMENT ALL METHOD HERE
+  /**
+   * Combines multiple ResultAsync instances into a single ResultAsync.
+   * Similar to Promise.all, this method takes an array of ResultAsync values and returns
+   * a single ResultAsync containing an array of all success values if all inputs succeed,
+   * or the first error encountered if any input fails.
+   *
+   * @template T - A tuple type representing the array of ResultAsync instances
+   * @param results - An array of ResultAsync instances to combine
+   * @returns A ResultAsync containing either an array of all success values or the first error
+   */
+  static all<T extends readonly ResultAsync<any, any>[]>(
+    results: T,
+  ): ResultAsync<
+    { [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never },
+    T[number] extends ResultAsync<any, infer E> ? E : never
+  > {
+    const promise = Promise.all(
+      results.map((r) => r.toResult()),
+    ).then((resolvedResults) => {
+      // Check if any result is an error and return the first one found
+      for (const result of resolvedResults) {
+        if (result.isErr()) {
+          return result as any; // Return type correctness is enforced by the return type of the function
+        }
+      }
+
+      // All results succeeded, collect all success values
+      const values = resolvedResults.map((r) => r.data);
+      return Result.ok(values);
+    });
+
+    return new ResultAsync(promise) as any; // Same here
+  }
+
+  /**
+   * Combines multiple ResultAsync instances into a single ResultAsync, similar to Promise.allSettled.
+   * Unlike ResultAsync.all which returns the first error, this method waits for all ResultAsync
+   * instances to complete and returns either all success values or all error values.
+   *
+   * If all ResultAsync instances succeed, returns Ok with an array of all success values.
+   * If one or more ResultAsync instances fail, returns Err with an array of all error values.
+   *
+   * @template T - A tuple type representing the array of ResultAsync instances
+   * @param results - An array of ResultAsync instances to combine
+   * @returns A ResultAsync containing either an array of all success values or an array of all errors
+   */
+  static allSettled<T extends readonly ResultAsync<any, any>[]>(
+    results: T,
+  ): ResultAsync<
+    { [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never },
+    Array<T[number] extends ResultAsync<any, infer E> ? E : never>
+  > {
+    const promise = Promise.all(
+      results.map((r) => r.toResult()),
+    ).then((resolvedResults) => {
+      // Collect all errors
+      const errors: any[] = [];
+      for (const result of resolvedResults) {
+        if (result.isErr()) {
+          errors.push(result.error);
+        }
+      }
+
+      // If there are any errors, return Err with all errors
+      if (errors.length > 0) {
+        return Result.err(errors);
+      }
+
+      // All results succeeded, collect all success values
+      const values = resolvedResults.map((r) => r.data);
+      return Result.ok(values);
+    });
+
+    return new ResultAsync(promise) as any;
+  }
 
   /**
    * Transforms the success value of this ResultAsync using a function that may be async.

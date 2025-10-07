@@ -93,6 +93,113 @@ const result = ResultAsync.fromPromise(fetch("/api/data")).mapErr(
 );
 ```
 
+### Combining Multiple ResultAsync
+
+#### ResultAsync.all - fail-fast
+
+Combines multiple async operations similar to `Promise.all`. Returns the **first error** encountered.
+
+```typescript
+// Combine multiple async operations (similar to Promise.all)
+const result = await ResultAsync.all([
+  fetchUser("user123"),
+  fetchPosts("user123"),
+  fetchComments("user123"),
+]).toResult();
+
+if (result.isOk()) {
+  const [user, posts, comments] = result.data;
+  // All operations succeeded
+} else {
+  // At least one operation failed - result.error contains the FIRST error
+}
+
+// Type preservation with different types
+const combined = ResultAsync.all([
+  ResultAsync.ok(42), // number
+  ResultAsync.ok("hello"), // string
+  ResultAsync.ok(true), // boolean
+]);
+// Type: ResultAsync<[number, string, boolean], never>
+
+// Chain with map for parallel operations
+const sum = await ResultAsync.all([
+  fetchNumber(1),
+  fetchNumber(2),
+  fetchNumber(3),
+])
+  .map((numbers) => numbers.reduce((acc, n) => acc + n, 0))
+  .toResult();
+```
+
+#### ResultAsync.allSettled - collect all errors
+
+Combines multiple async operations similar to `Promise.allSettled`. Returns **all errors** if any operation fails.
+
+```typescript
+// Collect all errors from multiple operations
+const result = await ResultAsync.allSettled([
+  validateEmail(email),
+  validatePassword(password),
+  validateUsername(username),
+]).toResult();
+
+if (result.isOk()) {
+  const [emailValid, passwordValid, usernameValid] = result.data;
+  // All validations succeeded
+} else {
+  // One or more validations failed - result.error contains ALL errors
+  console.log(`Found ${result.error.length} validation errors`);
+  result.error.forEach((error, index) => {
+    console.error(`Error ${index + 1}: ${error}`);
+  });
+}
+
+// Process errors with mapErr
+const validationResult = await ResultAsync.allSettled([
+  validateField1(),
+  validateField2(),
+  validateField3(),
+])
+  .mapErr((errors) => ({
+    count: errors.length,
+    summary: `${errors.length} validation errors occurred`,
+    details: errors,
+  }))
+  .toResult();
+
+if (validationResult.isErr()) {
+  console.log(validationResult.error.summary);
+  // "3 validation errors occurred"
+}
+```
+
+**When to use each:**
+
+- **Use `ResultAsync.all`** when you want fail-fast behavior and only need the first error
+- **Use `ResultAsync.allSettled`** when you need to collect all errors for comprehensive error reporting
+
+```typescript
+// Comparison example
+const operations = [
+  ResultAsync.err("error 1"),
+  ResultAsync.err("error 2"),
+  ResultAsync.err("error 3"),
+];
+
+// all() returns first error only
+const allResult = await ResultAsync.all(operations).toResult();
+if (allResult.isErr()) {
+  console.log(allResult.error); // "error 1"
+}
+
+// allSettled() returns all errors
+const settledResult = await ResultAsync.allSettled(operations).toResult();
+if (settledResult.isErr()) {
+  console.log(settledResult.error); // ["error 1", "error 2", "error 3"]
+}
+```
+
 ### Consuming ResultAsync
 
 ```typescript
