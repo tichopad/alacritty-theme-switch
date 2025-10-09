@@ -2,6 +2,16 @@
  * Module for defining custom error types for the theme manager.
  */
 
+import type {
+  DirectoryIsFileError,
+  DirectoryNotAccessibleError,
+  DirectoryNotDirectoryError,
+  FileIsDirectoryError,
+  FileNotFoundError,
+  FileNotReadableError,
+  FileNotTOMLError,
+} from "../errors/file-and-dir-errors.ts";
+
 export class BackupError extends Error {
   readonly _tag = "BackupError";
   path: string;
@@ -38,36 +48,6 @@ export class ThemeNotTOMLError extends Error {
   }
 }
 
-export class DirectoryIsFileError extends Error {
-  readonly _tag = "DirectoryIsFileError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Given themes directory ${path} is a file.`, options);
-    this.path = path;
-  }
-}
-
-export class DirectoryNotDirectoryError extends Error {
-  readonly _tag = "DirectoryNotDirectoryError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Given themes directory ${path} is not a directory.`, options);
-    this.path = path;
-  }
-}
-
-export class DirectoryNotAccessibleError extends Error {
-  readonly _tag = "DirectoryNotAccessibleError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(
-      `Given themes directory ${path} does not exist or is not readable.`,
-      options,
-    );
-    this.path = path;
-  }
-}
-
 export class NoThemesFoundError extends Error {
   readonly _tag = "NoThemesFoundError";
   path: string;
@@ -76,42 +56,6 @@ export class NoThemesFoundError extends Error {
       `Given themes directory ${path} does not contain any TOML files.`,
       options,
     );
-    this.path = path;
-  }
-}
-
-export class FileNotFoundError extends Error {
-  readonly _tag = "FileNotFoundError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`File ${path} not found.`, options);
-    this.path = path;
-  }
-}
-
-export class FileNotReadableError extends Error {
-  readonly _tag = "FileNotReadableError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`File ${path} is not readable.`, options);
-    this.path = path;
-  }
-}
-
-export class FileNotTOMLError extends Error {
-  readonly _tag = "FileNotTOMLError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`${path} is not a TOML file.`, options);
-    this.path = path;
-  }
-}
-
-export class FileIsDirectoryError extends Error {
-  readonly _tag = "FileIsDirectoryError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`${path} is a directory.`, options);
     this.path = path;
   }
 }

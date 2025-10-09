@@ -32,7 +32,7 @@ Deno.test("clearThemesCommand: successfully deletes all theme files", async () =
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      assertEquals(result.data, 3);
+      assertEquals(result.data.length, 3);
 
       // Verify theme files were deleted
       const theme1Exists = await Deno.stat(`${tempDir}/theme1.toml`)
@@ -68,6 +68,9 @@ Deno.test("clearThemesCommand: returns error for nonexistent directory", async (
 
   assertEquals(result.isErr(), true);
   if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
     assertEquals(result.error._tag, "DirectoryNotAccessibleError");
   }
 });
@@ -82,6 +85,9 @@ Deno.test("clearThemesCommand: returns error for empty directory", async () => {
 
     assertEquals(result.isErr(), true);
     if (result.isErr()) {
+      if (Array.isArray(result.error)) {
+        throw new Error("Expected single error, got array");
+      }
       assertEquals(result.error._tag, "NoThemesFoundError");
     }
   } finally {
@@ -104,6 +110,9 @@ Deno.test("clearThemesCommand: returns error for directory with no toml files", 
 
     assertEquals(result.isErr(), true);
     if (result.isErr()) {
+      if (Array.isArray(result.error)) {
+        throw new Error("Expected single error, got array");
+      }
       assertEquals(result.error._tag, "NoThemesFoundError");
     }
   } finally {
@@ -139,7 +148,7 @@ Deno.test("clearThemesCommand: deletes themes in subdirectories", async () => {
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      assertEquals(result.data, 3);
+      assertEquals(result.data.length, 3);
 
       // Verify all theme files were deleted
       const theme1Exists = await Deno.stat(`${tempDir}/theme1.toml`)
@@ -183,7 +192,7 @@ Deno.test("clearThemesCommand: returns ResultAsync that can be chained", async (
 
     // Chain a map operation to verify it's a proper ResultAsync
     const mappedResult = await resultAsync
-      .map((count) => `Deleted ${count} files`)
+      .map((paths) => `Deleted ${paths.length} files`)
       .toResult();
 
     assertEquals(mappedResult.isOk(), true);
@@ -208,6 +217,9 @@ Deno.test("clearThemesCommand: can use match pattern for error handling", async 
     },
     (error) => {
       errorHandled = true;
+      if (Array.isArray(error)) {
+        throw new Error("Expected single error, got array");
+      }
       assertEquals(error._tag, "DirectoryNotAccessibleError");
     },
   );

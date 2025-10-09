@@ -1,10 +1,6 @@
 import { copy } from "@std/fs/copy";
-import { walk } from "@std/fs/walk";
 import { stringify } from "@std/toml/stringify";
-import { Result } from "../no-exceptions/result.ts";
-import { ResultAsync } from "../no-exceptions/result-async.ts";
 import {
-  BackupError,
   DirectoryIsFileError,
   DirectoryNotAccessibleError,
   DirectoryNotDirectoryError,
@@ -12,6 +8,11 @@ import {
   FileNotFoundError,
   FileNotReadableError,
   FileNotTOMLError,
+} from "../errors/file-and-dir-errors.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
+import { safeWalkAll } from "../utils.ts";
+import {
+  BackupError,
   type LoadThemesError,
   NoThemesFoundError,
   type ParseConfigError,
@@ -81,6 +82,10 @@ export function checkThemeExists(filename: string, allThemes: Theme[]) {
   return validateFile(theme.path).map(() => theme);
 }
 
+type LoadThemesOutput = ResultAsync<
+  Theme[],
+  LoadThemesError | FileNotReadableError[]
+>;
 /**
  * Discovers and loads all TOML theme files from the specified directory.
  * Detects the brightness (light/dark) of each theme by parsing its content.
@@ -88,39 +93,28 @@ export function checkThemeExists(filename: string, allThemes: Theme[]) {
  * If any theme file cannot be read or parsed, the entire operation fails with
  * an error indicating which file caused the problem.
  */
-export function loadThemes(themeDirPath: FilePath) {
-  return validateDir(themeDirPath).flatMap(() => {
-    return walkThemes(themeDirPath).flatMap(
-      async (themes): Promise<Result<Theme[], LoadThemesError>> => {
-        if (themes.length === 0) {
-          return Result.err(new NoThemesFoundError(themeDirPath));
+export function loadThemes(themeDirPath: FilePath): LoadThemesOutput {
+  return validateDir(themeDirPath)
+    .flatMap(() => {
+      const entriesResult = safeWalkAll(themeDirPath, {
+        exts: ["toml"],
+        includeFiles: true,
+        includeDirs: false,
+      });
+      return entriesResult.flatMap((entries): LoadThemesOutput => {
+        if (entries.length === 0) {
+          return ResultAsync.err(new NoThemesFoundError(themeDirPath));
         }
 
-        // Parse each theme file to create Theme instances
-        const parseResults = await Promise.all(
-          themes.map(async (theme) => {
-            const parseResult = await safeParseToml(theme.path).toResult();
-            return parseResult.map((themeContent) =>
-              new Theme(theme.path, themeContent, null)
-            );
-          }),
-        );
+        const themeResults = entries.map((entry) => {
+          return safeParseToml(entry.path).map((themeContent) =>
+            new Theme(entry.path, themeContent, null)
+          );
+        });
 
-        // Check if any parsing failed - fail fast on first error
-        const firstError = parseResults.find((result) => result.isErr());
-        if (firstError?.isErr()) {
-          return Result.err(firstError.error);
-        }
-
-        // All succeeded, extract the themes
-        const themeInstances = parseResults
-          .filter((result): result is Result<Theme, never> => result.isOk())
-          .map((result) => result.data);
-
-        return Result.ok(themeInstances);
-      },
-    );
-  });
+        return ResultAsync.allSettled(themeResults);
+      });
+    });
 }
 
 /**
@@ -159,14 +153,4 @@ function validateDir(dirPath: FilePath) {
     }
     return ResultAsync.ok(stat);
   });
-}
-
-/**
- * Walks the theme directory and returns all theme TOML files.
- */
-function walkThemes(themeDirPath: FilePath) {
-  return ResultAsync.fromPromise(
-    Array.fromAsync(walk(themeDirPath, { exts: ["toml"] })),
-    (error) => new NoThemesFoundError(themeDirPath, { cause: error }),
-  );
 }

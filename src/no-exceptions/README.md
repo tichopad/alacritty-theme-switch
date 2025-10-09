@@ -1,7 +1,7 @@
 # No Exceptions
 
-Rust and supermacro/neverthrow inspired error handling types for TypeScript that provide functional error
-handling without exceptions.
+Rust and supermacro/neverthrow inspired error handling types for TypeScript that
+provide functional error handling without exceptions.
 
 ## Result
 
@@ -60,7 +60,7 @@ const result = ResultAsync.fromPromise(fetch("/api/data"));
 // With error mapping
 const result = ResultAsync.fromPromise(
   fetch("/api/data"),
-  (error) => `Network error: ${error.message}`
+  (error) => `Network error: ${error.message}`,
 );
 
 // From Result
@@ -89,7 +89,7 @@ const user = ResultAsync.ok("user123")
 
 // MapErr transforms error values
 const result = ResultAsync.fromPromise(fetch("/api/data")).mapErr(
-  (error) => `Request failed: ${error.message}`
+  (error) => `Request failed: ${error.message}`,
 );
 ```
 
@@ -97,7 +97,8 @@ const result = ResultAsync.fromPromise(fetch("/api/data")).mapErr(
 
 #### ResultAsync.all - fail-fast
 
-Combines multiple async operations similar to `Promise.all`. Returns the **first error** encountered.
+Combines multiple async operations similar to `Promise.all`. Returns the **first
+error** encountered.
 
 ```typescript
 // Combine multiple async operations (similar to Promise.all)
@@ -134,7 +135,8 @@ const sum = await ResultAsync.all([
 
 #### ResultAsync.allSettled - collect all errors
 
-Combines multiple async operations similar to `Promise.allSettled`. Returns **all errors** if any operation fails.
+Combines multiple async operations similar to `Promise.allSettled`. Returns
+**all errors** if any operation fails.
 
 ```typescript
 // Collect all errors from multiple operations
@@ -176,8 +178,10 @@ if (validationResult.isErr()) {
 
 **When to use each:**
 
-- **Use `ResultAsync.all`** when you want fail-fast behavior and only need the first error
-- **Use `ResultAsync.allSettled`** when you need to collect all errors for comprehensive error reporting
+- **Use `ResultAsync.all`** when you want fail-fast behavior and only need the
+  first error
+- **Use `ResultAsync.allSettled`** when you need to collect all errors for
+  comprehensive error reporting
 
 ```typescript
 // Comparison example
@@ -212,7 +216,7 @@ if (result.isOk()) {
 // Pattern matching
 const message = await resultAsync.match(
   (data) => `Success: ${data}`,
-  (error) => `Error: ${error}`
+  (error) => `Error: ${error}`,
 );
 
 // Unwrap (throws on error - use sparingly)

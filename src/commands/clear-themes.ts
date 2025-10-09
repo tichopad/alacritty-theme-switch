@@ -4,13 +4,14 @@
  * This module handles deleting all theme files from the local themes directory.
  */
 
-import { walk } from "@std/fs/walk";
-import { ResultAsync } from "../no-exceptions/result-async.ts";
-import {
+import type {
   DirectoryNotAccessibleError,
-  NoThemesFoundError,
-} from "../theme-manager/errors.ts";
+  FileDeletionError,
+} from "../errors/file-and-dir-errors.ts";
+import { ResultAsync } from "../no-exceptions/result-async.ts";
+import { NoThemesFoundError } from "../theme-manager/errors.ts";
 import type { FilePath } from "../theme-manager/types.ts";
+import { safeDeleteFile, safeWalkAll } from "../utils.ts";
 
 /**
  * Options for the clear-themes command.
@@ -20,25 +21,11 @@ export type ClearThemesOptions = {
   themesPath: FilePath;
 };
 
-/**
- * Error indicating that a theme file could not be deleted.
- */
-export class ThemeDeletionError extends Error {
-  readonly _tag = "ThemeDeletionError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Failed to delete theme file ${path}.`, options);
-    this.path = path;
-  }
-}
-
-/**
- * Error types that can be returned by the clear-themes command.
- */
-export type ClearThemesError =
-  | DirectoryNotAccessibleError
-  | NoThemesFoundError
-  | ThemeDeletionError;
+/** Type alias for the output of the clear-themes command. */
+type ClearThemesOutput = ResultAsync<
+  FilePath[],
+  DirectoryNotAccessibleError | NoThemesFoundError | FileDeletionError[]
+>;
 
 /**
  * Execute the clear-themes command.
@@ -56,7 +43,7 @@ export type ClearThemesError =
  * }).toResult();
  *
  * if (result.isOk()) {
- *   console.log(`Deleted ${result.data} theme(s)`);
+ *   console.log(`Deleted ${result.data.length} theme(s)`);
  * } else {
  *   console.error("Clear failed:", result.error);
  * }
@@ -64,54 +51,26 @@ export type ClearThemesError =
  */
 export function clearThemesCommand(
   options: ClearThemesOptions,
-): ResultAsync<number, ClearThemesError> {
-  const { themesPath } = options;
-
-  // Walk the directory to find all .toml files
-  return ResultAsync.fromPromise(
-    Array.fromAsync(walk(themesPath, { exts: ["toml"] })),
-    (error) => {
-      // All errors during directory walking are treated as directory not accessible
-      return new DirectoryNotAccessibleError(themesPath, { cause: error });
-    },
-  ).flatMap(
-    (entries): ResultAsync<number, NoThemesFoundError | ThemeDeletionError> => {
-      // Filter to only include files (not directories)
-      const themeFiles = entries.filter((entry) => entry.isFile);
-
-      if (themeFiles.length === 0) {
-        return ResultAsync.err(new NoThemesFoundError(themesPath));
+): ClearThemesOutput {
+  return safeWalkAll(options.themesPath, {
+    exts: ["toml"],
+    includeFiles: true,
+    includeDirs: false,
+  }).flatMap(
+    (
+      entries,
+    ): ClearThemesOutput => {
+      // If no theme files found, return error
+      if (entries.length === 0) {
+        return ResultAsync.err(new NoThemesFoundError(options.themesPath));
       }
 
-      // Delete all theme files
-      return ResultAsync.fromPromise(
-        (async () => {
-          let deletedCount = 0;
-          for (const entry of themeFiles) {
-            const result = await safeDeleteFile(entry.path).toResult();
-            if (result.isOk()) {
-              deletedCount++;
-            }
-          }
-          return deletedCount;
-        })(),
-        (error) => {
-          if (error instanceof ThemeDeletionError) {
-            return error;
-          }
-          // Fallback for unexpected errors
-          return new ThemeDeletionError(themesPath, { cause: error });
-        },
-      );
-    },
-  );
-}
+      const deleteResults = entries.map((entry) => {
+        // Delete the file and return the path
+        return safeDeleteFile(entry.path).map(() => entry.path as FilePath);
+      });
 
-function safeDeleteFile(
-  path: string,
-): ResultAsync<void, ThemeDeletionError> {
-  return ResultAsync.fromPromise(
-    Deno.remove(path),
-    (error) => new ThemeDeletionError(path, { cause: error }),
+      return ResultAsync.allSettled(deleteResults);
+    },
   );
 }

@@ -113,6 +113,13 @@ camelCase with descriptive verbs for functions (`applyTheme`, `listThemes`). Use
 PascalCase for types and interfaces (`ThemeManager`, `ParseConfigError`). Use
 SCREAMING_SNAKE_CASE for module-level constants.
 
+## Linting and Formatting
+
+### Checks
+
+Run `deno task check` after each change to check formatting, linting and type
+safety.
+
 ## Testing Guidelines
 
 ### Running tests

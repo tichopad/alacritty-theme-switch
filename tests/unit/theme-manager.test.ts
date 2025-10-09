@@ -42,7 +42,12 @@ Deno.test("createThemeManager: fails with invalid config", async () => {
   }).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "FileNotFoundError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "FileNotFoundError");
+  }
 });
 
 Deno.test("createThemeManager: fails with invalid themes directory", async () => {
@@ -58,7 +63,12 @@ Deno.test("createThemeManager: fails with invalid themes directory", async () =>
   }).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  }
 });
 
 Deno.test("ThemeManager.getConfig: returns current config", async () => {

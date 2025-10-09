@@ -28,9 +28,8 @@ if (args.version) {
 
 // Handle download-themes subcommand
 if (args.command === "download-themes") {
-  console.log(`Downloading themes from ${bold(args.url!)}...`);
-  console.log(`Git reference: ${args.ref}`);
-  console.log(`Output directory: ${args.themes}`);
+  console.log(`Downloading themes from ${bold(args.url)}@${bold(args.ref)}`);
+  console.log(`Output directory: ${bold(args.themes)}`);
   console.log();
 
   await downloadThemesCommand({
@@ -69,9 +68,11 @@ if (args.command === "clear-themes") {
   await clearThemesCommand({
     themesPath: args.themes,
   }).match(
-    (deletedCount) => {
+    (deletedPaths) => {
       console.log(
-        `\nSuccessfully deleted ${bold(deletedCount.toString())} theme(s) ✅`,
+        `\nSuccessfully deleted ${
+          bold(deletedPaths.length.toString())
+        } theme(s) ✅`,
       );
       Deno.exit(0);
     },
@@ -132,16 +133,20 @@ await ResultAsync.fromPromise(
     source: (input) => {
       return themes
         .filter((theme) => {
+          // If no input, show all themes
           if (!input) {
             return true;
           }
-          if (theme.label.toLowerCase().includes(input.toLowerCase())) {
-            return true;
+          // Match on brightness
+          if (/^light|dark$/i.test(input)) {
+            return theme.brightness === input.trim().toLowerCase();
           }
-          if (theme.brightness === "dark" && input.includes("dark")) {
-            return true;
-          }
-          if (theme.brightness === "light" && input.includes("light")) {
+          // Dumb fuzzy matching
+          const inputWords = input.split(/\s+/);
+          const allMatch = inputWords.every((word) =>
+            theme.label.toLowerCase().includes(word.toLowerCase())
+          );
+          if (allMatch) {
             return true;
           }
           return false;

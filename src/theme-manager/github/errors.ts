@@ -2,6 +2,7 @@
  * Module for defining custom error types for the GitHub client.
  */
 
+import type { DirectoryCreateError } from "../../errors/file-and-dir-errors.ts";
 import type { TomlParseError } from "../errors.ts";
 
 /**
@@ -55,19 +56,6 @@ export class FileWriteError extends Error {
 
   constructor(path: string, options?: ErrorOptions) {
     super(`Failed to write file: ${path}`, options);
-    this.path = path;
-  }
-}
-
-/**
- * Error thrown when creating a directory fails.
- */
-export class DirectoryCreateError extends Error {
-  readonly _tag = "DirectoryCreateError";
-  path: string;
-
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Failed to create directory: ${path}`, options);
     this.path = path;
   }
 }
