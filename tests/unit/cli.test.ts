@@ -1,5 +1,11 @@
 import { assertEquals } from "@std/assert";
-import { bold, getArgs, getHomeDir, underscore } from "../../src/cli.ts";
+import {
+  bold,
+  getArgs,
+  getHomeDir,
+  parsePositionalCommand,
+  underscore,
+} from "../../src/cli.ts";
 
 // Mock environment for testing getHomeDir function
 const originalEnv = {
@@ -286,4 +292,109 @@ Deno.test("getHomeDir: falls back to current directory when no env vars", () => 
   assertEquals(homeDir.length > 0, true);
 
   restoreEnv();
+});
+
+// Tests for download-themes command
+Deno.test("getArgs: download-themes command with default url", () => {
+  const args = getArgs(["download-themes"], "/home/user", "linux");
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/alacritty/alacritty-theme");
+});
+
+Deno.test("getArgs: download-themes command with custom url (short form)", () => {
+  const args = getArgs(
+    ["download-themes", "-u", "https://github.com/custom/repo"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/custom/repo");
+});
+
+Deno.test("getArgs: download-themes command with custom url (long form)", () => {
+  const args = getArgs(
+    ["download-themes", "--url", "https://github.com/custom/repo"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/custom/repo");
+});
+
+Deno.test("getArgs: download-themes command with custom ref (short form)", () => {
+  const args = getArgs(
+    ["download-themes", "-r", "develop"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.ref, "develop");
+});
+
+Deno.test("getArgs: download-themes command with custom ref (long form)", () => {
+  const args = getArgs(
+    ["download-themes", "--ref", "v1.2.3"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.ref, "v1.2.3");
+});
+
+Deno.test("getArgs: download-themes command with default ref", () => {
+  const args = getArgs(
+    ["download-themes"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.ref, "master");
+});
+
+Deno.test("getArgs: download-themes command with custom url and ref", () => {
+  const args = getArgs(
+    [
+      "download-themes",
+      "-u",
+      "https://github.com/custom/repo",
+      "-r",
+      "develop",
+    ],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "download-themes");
+  assertEquals(args.url, "https://github.com/custom/repo");
+  assertEquals(args.ref, "develop");
+});
+
+// Tests for clear-themes command
+Deno.test("getArgs: clear-themes command", () => {
+  const args = getArgs(["clear-themes"], "/home/user", "linux");
+
+  assertEquals(args.command, "clear-themes");
+});
+
+Deno.test("getArgs: clear-themes command with custom themes directory", () => {
+  const args = getArgs(
+    ["clear-themes", "-t", "/custom/themes"],
+    "/home/user",
+    "linux",
+  );
+
+  assertEquals(args.command, "clear-themes");
+  assertEquals(args.themes, "/custom/themes");
+});
+
+Deno.test("parsePositionalCommand: recognizes clear-themes", () => {
+  const command = parsePositionalCommand(["clear-themes"]);
+
+  assertEquals(command, "clear-themes");
 });

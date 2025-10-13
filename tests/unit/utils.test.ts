@@ -79,6 +79,62 @@ Deno.test("unslugify: another complex example", () => {
   );
 });
 
+Deno.test("unslugify: Roman numeral II", () => {
+  assertEquals(unslugify("moonlight_ii_vscode.toml"), "Moonlight II Vscode");
+});
+
+Deno.test("unslugify: Roman numeral I", () => {
+  assertEquals(unslugify("theme_i.toml"), "Theme I");
+});
+
+Deno.test("unslugify: Roman numeral III", () => {
+  assertEquals(unslugify("version_iii_dark.toml"), "Version III Dark");
+});
+
+Deno.test("unslugify: Roman numeral IV", () => {
+  assertEquals(unslugify("theme_iv.toml"), "Theme IV");
+});
+
+Deno.test("unslugify: Roman numeral V", () => {
+  assertEquals(unslugify("theme_v_pro.toml"), "Theme V Pro");
+});
+
+Deno.test("unslugify: Roman numeral VI", () => {
+  assertEquals(unslugify("theme_vi.toml"), "Theme VI");
+});
+
+Deno.test("unslugify: Roman numeral VII", () => {
+  assertEquals(unslugify("theme_vii.toml"), "Theme VII");
+});
+
+Deno.test("unslugify: Roman numeral VIII", () => {
+  assertEquals(unslugify("theme_viii.toml"), "Theme VIII");
+});
+
+Deno.test("unslugify: Roman numeral IX", () => {
+  assertEquals(unslugify("theme_ix.toml"), "Theme IX");
+});
+
+Deno.test("unslugify: Roman numeral X", () => {
+  assertEquals(unslugify("theme_x.toml"), "Theme X");
+});
+
+Deno.test("unslugify: multiple Roman numerals", () => {
+  assertEquals(unslugify("theme_ii_v_edition.toml"), "Theme II V Edition");
+});
+
+Deno.test("unslugify: Roman numeral with mixed case input", () => {
+  assertEquals(unslugify("moonlight_II_vscode.toml"), "Moonlight II Vscode");
+});
+
+Deno.test("unslugify: word 'i' as Roman numeral", () => {
+  assertEquals(unslugify("i_am_theme.toml"), "I Am Theme");
+});
+
+Deno.test("unslugify: non-Roman numeral words unchanged", () => {
+  assertEquals(unslugify("invisible_theme.toml"), "Invisible Theme");
+});
+
 Deno.test("isToml: valid TOML file", () => {
   assertEquals(isToml("theme.toml"), true);
 });

@@ -1,5 +1,6 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { Result, ResultAsync } from "../../src/result.ts";
+import { Result } from "../../src/no-exceptions/result.ts";
+import { ResultAsync } from "../../src/no-exceptions/result-async.ts";
 
 Deno.test("Result.ok creates successful result", () => {
   const result = Result.ok("success");

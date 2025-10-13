@@ -1,4 +1,4 @@
-import { Result } from "../result.ts";
+import { Result } from "../no-exceptions/result.ts";
 import {
   checkThemeExists,
   createBackup,
@@ -6,7 +6,8 @@ import {
   parseConfig,
   writeConfigToFile,
 } from "./config-operations.ts";
-import type { Config, FilePath, Theme } from "./types.ts";
+import { Theme } from "./theme.ts";
+import type { Config, FilePath } from "./types.ts";
 
 /**
  * Theme manager encapsulates all operations related to theme management.
@@ -48,10 +49,9 @@ class ThemeManager {
    */
   listThemes() {
     const activeThemes = this.#getActiveThemes();
-    return this.#themes.map((theme) => ({
-      ...theme,
-      isCurrentlyActive: activeThemes.has(theme.path),
-    }));
+    return this.#themes.map((theme) =>
+      new Theme(theme.path, theme.themeContent, activeThemes.has(theme.path))
+    );
   }
 
   /**
@@ -66,7 +66,7 @@ class ThemeManager {
         newConfig.general.import ??= [];
         // Remove all themes from import entries first
         newConfig.general.import = newConfig.general.import.filter(
-          (importEntryPath) => !this.#themesPaths.has(importEntryPath),
+          (importEntryPath: string) => !this.#themesPaths.has(importEntryPath),
         );
         // Then add the selected theme there
         newConfig.general.import.push(selectedTheme.path);

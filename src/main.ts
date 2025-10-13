@@ -7,6 +7,9 @@ import {
   printVersion,
   underscore,
 } from "./cli.ts";
+import { clearThemesCommand } from "./commands/clear-themes.ts";
+import { downloadThemesCommand } from "./commands/download-themes.ts";
+import { ResultAsync } from "./no-exceptions/result-async.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);
@@ -21,6 +24,66 @@ if (args.help) {
 if (args.version) {
   printVersion();
   Deno.exit(0);
+}
+
+// Handle download-themes subcommand
+if (args.command === "download-themes") {
+  console.log(`Downloading themes from ${bold(args.url)}@${bold(args.ref)}`);
+  console.log(`Output directory: ${bold(args.themes)}`);
+
+  await downloadThemesCommand({
+    repositoryUrl: args.url,
+    outputPath: args.themes,
+    ref: args.ref,
+  }).match(
+    (downloadedThemes) => {
+      console.log(
+        `\nSuccessfully downloaded ${
+          bold(downloadedThemes.length.toString())
+        } theme(s): ✅`,
+      );
+      downloadedThemes.forEach((theme) => {
+        console.log(` - ${theme.label}`);
+      });
+      console.log(
+        `\n💙 These themes are made possible by the open-source community.`,
+      );
+      console.log(`   Consider supporting the authors at ${bold(args.url)}`);
+      Deno.exit(0);
+    },
+    (error) => {
+      console.error("Failed to download themes! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );
+}
+
+// Handle clear-themes subcommand
+if (args.command === "clear-themes") {
+  console.log(`Clearing all themes from ${bold(args.themes)}...`);
+
+  await clearThemesCommand({
+    themesPath: args.themes,
+  }).match(
+    (deletedPaths) => {
+      console.log(
+        `Successfully deleted ${
+          bold(deletedPaths.length.toString())
+        } theme(s) ✅`,
+      );
+      Deno.exit(0);
+    },
+    (error) => {
+      if (error._tag === "NoThemesFoundError") {
+        console.log("No themes found to delete. ✅");
+        Deno.exit(0);
+      }
+      console.error("Failed to clear themes! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );
 }
 
 // We're in theme management territory now -> create a manager
@@ -57,35 +120,77 @@ if (args.select !== undefined) {
 
 // Else prompt user to select a theme
 const themes = manager.listThemes();
-const selectedTheme = await search({
-  message: "Select Alacritty color theme",
-  source: (input) => {
-    return themes
-      .filter((theme) => {
-        return input
-          ? theme.label.toLowerCase().includes(input.toLowerCase())
-          : true;
-      })
-      .map((theme) => {
-        return {
-          name: theme.isCurrentlyActive
-            ? underscore(bold(theme.label) + " ✨")
-            : theme.label,
-          value: theme,
-        };
-      });
-  },
-});
+const activeTheme = themes.find((t) => t.isCurrentlyActive);
 
-// And apply it
-await manager.applyTheme(selectedTheme).match(
-  (appliedTheme) => {
-    console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
-    Deno.exit(0);
-  },
-  (error) => {
-    console.log("Failed to apply theme! ❌");
-    console.error(error);
-    Deno.exit(1);
-  },
-);
+await ResultAsync.fromPromise(
+  search({
+    message: activeTheme
+      ? `Select Alacritty color theme (current: ${activeTheme.label})`
+      : `Select Alacritty color theme`,
+    instructions: {
+      navigation: "Use arrow keys to navigate (or type to search)",
+      pager: "Use space to select and enter to confirm",
+    },
+    pageSize: 10,
+    source: (input) => {
+      return themes
+        .filter((theme) => {
+          // If no input, show all themes
+          if (!input) {
+            return true;
+          }
+          // Match on brightness
+          if (/^light|dark$/i.test(input)) {
+            return theme.brightness === input.trim().toLowerCase();
+          }
+          // Dumb fuzzy matching
+          const inputWords = input.split(/\s+/);
+          const allMatch = inputWords.every((word) =>
+            theme.label.toLowerCase().includes(word.toLowerCase())
+          );
+          if (allMatch) {
+            return true;
+          }
+          return false;
+        })
+        .sort((a, b) => {
+          // Sort by brightness first (dark before light)
+          if (a.brightness !== b.brightness) {
+            return a.brightness === "dark" ? -1 : 1;
+          }
+          // Then sort alphabetically by label
+          return a.label.localeCompare(b.label, undefined, { numeric: true });
+        })
+        .map((theme) => {
+          // Add brightness indicator to theme name
+          const brightnessIcon = theme.brightness === "light" ? "☀️ " : "🌙";
+          const themeName = `${brightnessIcon} ${theme.label}`;
+
+          return {
+            name: theme.isCurrentlyActive
+              ? underscore(bold(themeName) + " ✨")
+              : themeName,
+            value: theme,
+          };
+        });
+    },
+  }),
+  (error) => error,
+)
+  .flatMap((selectedTheme) => manager.applyTheme(selectedTheme))
+  .match(
+    (appliedTheme) => {
+      console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
+      Deno.exit(0);
+    },
+    (error) => {
+      // Handle Ctrl+C gracefully
+      if (error instanceof Error && error.name === "ExitPromptError") {
+        console.log("\nExiting...");
+        Deno.exit(0);
+      }
+      console.log("Failed to apply theme! ❌");
+      console.error(error);
+      Deno.exit(1);
+    },
+  );

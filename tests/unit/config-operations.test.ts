@@ -6,6 +6,7 @@ import {
   parseConfig,
   writeConfigToFile,
 } from "../../src/theme-manager/config-operations.ts";
+import { Theme } from "../../src/theme-manager/theme.ts";
 import {
   assertFileExists,
   createBasicConfig,
@@ -149,6 +150,11 @@ Deno.test("loadThemes: successfully loads themes from directory", async () => {
     assertEquals(theme.path.startsWith(env.themesDir), true);
     assertEquals(theme.path.endsWith(".toml"), true);
     assertEquals(theme.isCurrentlyActive, null);
+    // Verify brightness is detected (should be "dark" for test themes)
+    assertEquals(
+      theme.brightness === "dark" || theme.brightness === "light",
+      true,
+    );
   });
 });
 
@@ -172,7 +178,12 @@ Deno.test("loadThemes: fails with empty directory", async () => {
   const result = await loadThemes(env.themesDir).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "NoThemesFoundError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "NoThemesFoundError");
+  }
 });
 
 Deno.test("loadThemes: fails with nonexistent directory", async () => {
@@ -182,7 +193,12 @@ Deno.test("loadThemes: fails with nonexistent directory", async () => {
   const result = await loadThemes(nonExistentDir).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  }
 });
 
 Deno.test("loadThemes: fails when path is file", async () => {
@@ -193,7 +209,46 @@ Deno.test("loadThemes: fails when path is file", async () => {
   const result = await loadThemes(env.configPath).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "DirectoryIsFileError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "DirectoryIsFileError");
+  }
+});
+
+Deno.test("loadThemes: fails when theme file contains invalid TOML", async () => {
+  await using env = await createTestEnvironment();
+
+  // Create one valid theme and one invalid theme
+  await createTestThemes(env.themesDir, ["valid-theme"]);
+  await Deno.writeTextFile(
+    `${env.themesDir}/invalid-theme.toml`,
+    "this is not valid TOML syntax [[[",
+  );
+
+  const result = await loadThemes(env.themesDir).toResult();
+
+  assertEquals(result.isErr(), true);
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      // When there are multiple errors, find the one for invalid-theme.toml
+      const invalidThemeError = result.error.find((
+        e: { path: string; _tag: string },
+      ) => e.path.endsWith("invalid-theme.toml"));
+      assertEquals(invalidThemeError !== undefined, true);
+      assertEquals(invalidThemeError?._tag, "FileNotReadableError");
+    } else {
+      assertEquals(result.error._tag, "FileNotReadableError");
+      if (result.error._tag === "FileNotReadableError") {
+        assertEquals(
+          result.error.path.endsWith("invalid-theme.toml"),
+          true,
+          "Error should reference the invalid theme file",
+        );
+      }
+    }
+  }
 });
 
 Deno.test("checkThemeExists: finds existing theme", async () => {
@@ -229,11 +284,7 @@ Deno.test("checkThemeExists: fails with non-TOML theme", async () => {
   const themes = (await loadThemes(env.themesDir).toResult()).data;
 
   // Manually add a non-TOML theme to the list
-  const nonTomlTheme = {
-    path: `${env.themesDir}/theme.txt`,
-    label: "Non TOML",
-    isCurrentlyActive: null,
-  };
+  const nonTomlTheme = new Theme(`${env.themesDir}/theme.txt`, {}, null);
   themes.push(nonTomlTheme);
 
   const result = await checkThemeExists("theme.txt", themes).toResult();

@@ -42,7 +42,12 @@ Deno.test("createThemeManager: fails with invalid config", async () => {
   }).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "FileNotFoundError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "FileNotFoundError");
+  }
 });
 
 Deno.test("createThemeManager: fails with invalid themes directory", async () => {
@@ -58,7 +63,12 @@ Deno.test("createThemeManager: fails with invalid themes directory", async () =>
   }).toResult();
 
   assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  if (result.isErr()) {
+    if (Array.isArray(result.error)) {
+      throw new Error("Expected single error, got array");
+    }
+    assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+  }
 });
 
 Deno.test("ThemeManager.getConfig: returns current config", async () => {
@@ -221,7 +231,7 @@ Deno.test("ThemeManager.applyThemeByFilename: applies theme by filename", async 
 
   const config = manager.getConfig();
   assertEquals(
-    config.general?.import?.some((i) => i.includes("monokai-pro.toml")),
+    config.general?.import?.some((i: string) => i.includes("monokai-pro.toml")),
     true,
   );
 });
