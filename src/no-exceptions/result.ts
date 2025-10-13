@@ -31,17 +31,19 @@ export type Err<E> = Result<never, E>;
  * @template E - The type of the error value
  */
 export class Result<T, E> {
+  readonly #variant: { _tag: "ok"; value: T } | { _tag: "err"; value: E };
+
   /**
    * Protected constructor to prevent direct instantiation.
    * Use Result.ok() or Result.err() static methods to create instances.
    *
-   * @param _tag - Discriminant tag indicating whether this is an "ok" or "err" result
-   * @param value - The actual value (either success data or error)
+   * @param variant - Discriminated union containing either success data or error
    */
-  protected constructor(
-    readonly _tag: "ok" | "err",
-    protected readonly value: T | E,
-  ) {}
+  constructor(
+    variant: { _tag: "ok"; value: T } | { _tag: "err"; value: E },
+  ) {
+    this.#variant = variant;
+  }
 
   /**
    * Creates a successful Result containing the provided data.
@@ -51,7 +53,7 @@ export class Result<T, E> {
    * @returns An Ok result containing the provided data
    */
   static ok<T>(data: T): Ok<T> {
-    return new Result("ok", data) as Ok<T>;
+    return new Result({ _tag: "ok", value: data }) as Ok<T>;
   }
 
   /**
@@ -62,7 +64,7 @@ export class Result<T, E> {
    * @returns An Err result containing the provided error
    */
   static err<E>(error: E): Err<E> {
-    return new Result("err", error) as Err<E>;
+    return new Result({ _tag: "err", value: error }) as Err<E>;
   }
 
   /**
@@ -93,7 +95,7 @@ export class Result<T, E> {
    * @returns true if this Result contains a success value, false otherwise
    */
   isOk(): this is Ok<T> {
-    return this._tag === "ok";
+    return this.#variant._tag === "ok";
   }
 
   /**
@@ -103,7 +105,16 @@ export class Result<T, E> {
    * @returns true if this Result contains an error value, false otherwise
    */
   isErr(): this is Err<E> {
-    return this._tag === "err";
+    return this.#variant._tag === "err";
+  }
+
+  /**
+   * Gets the discriminant tag indicating whether this is an "ok" or "err" result.
+   *
+   * @returns The tag value ("ok" or "err")
+   */
+  get _tag(): "ok" | "err" {
+    return this.#variant._tag;
   }
 
   /**
@@ -113,7 +124,9 @@ export class Result<T, E> {
    * @returns The success value of type T
    */
   get data(): T {
-    if (this.isOk()) return this.value as T;
+    if (this.#variant._tag === "ok") {
+      return this.#variant.value;
+    }
     throw new Error("Cannot get data from an Err");
   }
 
@@ -124,7 +137,9 @@ export class Result<T, E> {
    * @returns The error value of type E
    */
   get error(): E {
-    if (this.isErr()) return this.value as E;
+    if (this.#variant._tag === "err") {
+      return this.#variant.value;
+    }
     throw new Error("Cannot get error from an Ok");
   }
 
@@ -138,9 +153,9 @@ export class Result<T, E> {
    * @returns A new Result with the transformed value or the original error
    */
   map<U>(f: (value: T) => U): Result<U, E> {
-    return this.isOk()
-      ? Result.ok(f(this.data))
-      : (this as unknown as Result<U, E>);
+    return this.#variant._tag === "ok"
+      ? Result.ok(f(this.#variant.value))
+      : Result.err(this.#variant.value);
   }
 
   /**
@@ -153,7 +168,11 @@ export class Result<T, E> {
    * @returns A new Result from the function or the original error
    */
   flatMap<U>(f: (value: T) => Result<U, E>): Result<U, E> {
-    return this.isOk() ? f(this.data) : (this as unknown as Result<U, E>);
+    if (this.#variant._tag === "ok") {
+      return f(this.#variant.value);
+    } else {
+      return Result.err(this.#variant.value);
+    }
   }
 
   /**
@@ -164,8 +183,8 @@ export class Result<T, E> {
    */
   toJSON() {
     return {
-      _tag: this._tag,
-      [this._tag === "ok" ? "data" : "error"]: this.value,
+      _tag: this.#variant._tag,
+      [this.#variant._tag === "ok" ? "data" : "error"]: this.#variant.value,
     };
   }
 
