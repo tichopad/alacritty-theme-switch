@@ -91,6 +91,15 @@ const user = ResultAsync.ok("user123")
 const result = ResultAsync.fromPromise(fetch("/api/data")).mapErr(
   (error) => `Request failed: ${error.message}`,
 );
+
+// Finally executes cleanup code regardless of success or error
+const result = await ResultAsync.fromPromise(fetch("/api/data"))
+  .map((response) => response.json())
+  .finally(() => {
+    console.log("Request completed");
+    // Cleanup code runs whether the operation succeeded or failed
+  })
+  .toResult();
 ```
 
 ### Combining Multiple ResultAsync

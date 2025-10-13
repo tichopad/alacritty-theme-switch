@@ -11,13 +11,17 @@ import { Result } from "./result.ts";
  * @template E - The type of the error value
  */
 export class ResultAsync<T, E> {
+  readonly #promise: Promise<Result<T, E>>;
+
   /**
    * Creates a new ResultAsync from a Promise<Result<T, E>>.
    * This constructor is typically not called directly; use the static factory methods instead.
    *
    * @param promise - A promise that resolves to a Result
    */
-  constructor(private readonly promise: Promise<Result<T, E>>) {}
+  constructor(promise: Promise<Result<T, E>>) {
+    this.#promise = promise;
+  }
 
   // Static constructors
   /**
@@ -92,22 +96,27 @@ export class ResultAsync<T, E> {
     { [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never },
     T[number] extends ResultAsync<any, infer E> ? E : never
   > {
-    const promise = Promise.all(
+    type SuccessValues = {
+      [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never;
+    };
+    type ErrorValue = T[number] extends ResultAsync<any, infer E> ? E : never;
+
+    const promise: Promise<Result<SuccessValues, ErrorValue>> = Promise.all(
       results.map((r) => r.toResult()),
     ).then((resolvedResults) => {
       // Check if any result is an error and return the first one found
       for (const result of resolvedResults) {
         if (result.isErr()) {
-          return result as any; // Return type correctness is enforced by the return type of the function
+          return result as Result<SuccessValues, ErrorValue>;
         }
       }
 
       // All results succeeded, collect all success values
       const values = resolvedResults.map((r) => r.data);
-      return Result.ok(values);
+      return Result.ok(values as SuccessValues);
     });
 
-    return new ResultAsync(promise) as any; // Same here
+    return new ResultAsync(promise);
   }
 
   /**
@@ -128,11 +137,18 @@ export class ResultAsync<T, E> {
     { [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never },
     Array<T[number] extends ResultAsync<any, infer E> ? E : never>
   > {
-    const promise = Promise.all(
+    type SuccessValues = {
+      [K in keyof T]: T[K] extends ResultAsync<infer U, any> ? U : never;
+    };
+    type ErrorValues = Array<
+      T[number] extends ResultAsync<any, infer E> ? E : never
+    >;
+
+    const promise: Promise<Result<SuccessValues, ErrorValues>> = Promise.all(
       results.map((r) => r.toResult()),
     ).then((resolvedResults) => {
       // Collect all errors
-      const errors: any[] = [];
+      const errors: ErrorValues = [] as ErrorValues;
       for (const result of resolvedResults) {
         if (result.isErr()) {
           errors.push(result.error);
@@ -146,10 +162,10 @@ export class ResultAsync<T, E> {
 
       // All results succeeded, collect all success values
       const values = resolvedResults.map((r) => r.data);
-      return Result.ok(values);
+      return Result.ok(values as SuccessValues);
     });
 
-    return new ResultAsync(promise) as any;
+    return new ResultAsync(promise);
   }
 
   /**
@@ -162,18 +178,12 @@ export class ResultAsync<T, E> {
    * @returns A new ResultAsync with the transformed value or the original error
    */
   map<U>(f: (value: T) => U | Promise<U>): ResultAsync<U, E> {
-    const newPromise = this.promise.then(async (result) => {
+    const newPromise = this.#promise.then(async (result) => {
       if (result.isErr()) {
-        return result as unknown as Result<U, E>;
+        return result;
       }
-      try {
-        const mapped = await f(result.data);
-        return Result.ok<U>(mapped);
-      } catch (error) {
-        // If the mapping function throws, we need to handle it
-        // This is a bit tricky since we don't know the error type
-        throw error;
-      }
+      const mapped = await f(result.data);
+      return Result.ok<U>(mapped);
     });
     return new ResultAsync(newPromise);
   }
@@ -191,9 +201,9 @@ export class ResultAsync<T, E> {
   flatMap<U, F>(
     f: (value: T) => Result<U, F> | ResultAsync<U, F> | Promise<Result<U, F>>,
   ): ResultAsync<U, E | F> {
-    const newPromise = this.promise.then(async (result) => {
+    const newPromise = this.#promise.then(async (result) => {
       if (result.isErr()) {
-        return result as unknown as Result<U, E | F>;
+        return Result.err<E | F>(result.error);
       }
 
       const mapped = f(result.data);
@@ -220,9 +230,9 @@ export class ResultAsync<T, E> {
    * @returns A new ResultAsync with the transformed error or the original success value
    */
   mapErr<F>(f: (error: E) => F): ResultAsync<T, F> {
-    const newPromise = this.promise.then((result) => {
+    const newPromise = this.#promise.then((result) => {
       if (result.isOk()) {
-        return result as unknown as Result<T, F>;
+        return result;
       }
       return Result.err<F>(f(result.error));
     });
@@ -237,7 +247,7 @@ export class ResultAsync<T, E> {
    * @returns A new ResultAsync with the same result
    */
   finally(f: () => void): ResultAsync<T, E> {
-    const newPromise = this.promise.finally(f);
+    const newPromise = this.#promise.finally(f);
     return new ResultAsync(newPromise);
   }
 
@@ -248,7 +258,7 @@ export class ResultAsync<T, E> {
    * @returns A Promise that resolves to the underlying Result
    */
   toResult(): Promise<Result<T, E>> {
-    return this.promise;
+    return this.#promise;
   }
 
   /**
@@ -260,7 +270,7 @@ export class ResultAsync<T, E> {
    * @returns A Promise that resolves to the success value
    */
   async unwrap(): Promise<T> {
-    const result = await this.promise;
+    const result = await this.#promise;
     if (result.isOk()) {
       return result.data;
     }
@@ -281,7 +291,7 @@ export class ResultAsync<T, E> {
     onOk: (value: T) => U | Promise<U>,
     onErr: (error: E) => U | Promise<U>,
   ): Promise<U> {
-    const result = await this.promise;
+    const result = await this.#promise;
     if (result.isOk()) {
       return onOk(result.data);
     } else {
