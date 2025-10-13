@@ -36,23 +36,6 @@ export type DownloadThemesOptions = {
 export type DownloadThemesError = InvalidRepositoryUrlError | GitHubClientError;
 
 /**
- * Custom progress bar formatter that displays file count instead of data size.
- *
- * @param formatter - The formatter object provided by ProgressBar
- * @returns Formatted progress bar string showing files downloaded
- *
- * @example
- * ```
- * [00:05] [####------] [4/10 files]
- * ```
- */
-const progressBarFormatter = (
-  formatter: ProgressBarFormatter,
-): string => {
-  return `[${formatter.styledTime}] [${formatter.progressBar}] [${formatter.value}/${formatter.max} files]`;
-};
-
-/**
  * Execute the download-themes command.
  *
  * Downloads all theme files from a GitHub repository to the local themes directory.
@@ -82,32 +65,49 @@ export function downloadThemesCommand(
 ): ResultAsync<Theme[], DownloadThemesError> {
   const { repositoryUrl, outputPath, ref = "master" } = options;
 
-  const gitHubClient = createGitHubClient(repositoryUrl, ref);
+  const gitHubClientResult = createGitHubClient(repositoryUrl, ref);
+  if (gitHubClientResult.isErr()) {
+    return ResultAsync.err(gitHubClientResult.error);
+  }
 
-  return ResultAsync.fromResult(gitHubClient)
-    .flatMap((client) => {
-      return client.listThemes().flatMap((themes) => {
-        // Track progress
-        const progressBar = new ProgressBar({
-          max: themes.length,
-          formatter: progressBarFormatter,
-        });
+  const gitHubClient = gitHubClientResult.data;
 
-        return client.downloadAllThemes(
-          themes,
-          outputPath,
-          (current, _total) => {
-            progressBar.value = current;
-          },
-        ).map((downloadedThemes) => {
-          // Stop the progress bar on success
-          progressBar.stop();
-          return downloadedThemes;
-        }).mapErr((error) => {
-          // Stop the progress bar on error
-          progressBar.stop();
-          return error;
-        });
-      });
+  // List all remote themes first
+  const themesResult = gitHubClient.listThemes();
+  const downloadThemesResult = themesResult.flatMap((themes) => {
+    // Track progress
+    const progressBar = new ProgressBar({
+      max: themes.length,
+      formatter: progressBarFormatter,
     });
+    // Fetch themes
+    return gitHubClient.downloadAllThemes(
+      themes,
+      outputPath,
+      (current, _total) => {
+        progressBar.value = current;
+      },
+    ).finally(() => {
+      progressBar.stop();
+    });
+  });
+
+  return downloadThemesResult;
+}
+
+/**
+ * Custom progress bar formatter that displays file count instead of data size.
+ *
+ * @param formatter - The formatter object provided by ProgressBar
+ * @returns Formatted progress bar string showing files downloaded
+ *
+ * @example
+ * ```
+ * [00:05] [####------] [4/10 files]
+ * ```
+ */
+function progressBarFormatter(
+  formatter: ProgressBarFormatter,
+): string {
+  return `[${formatter.styledTime}] [${formatter.progressBar}] [${formatter.value}/${formatter.max} files]`;
 }

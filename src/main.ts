@@ -30,7 +30,6 @@ if (args.version) {
 if (args.command === "download-themes") {
   console.log(`Downloading themes from ${bold(args.url)}@${bold(args.ref)}`);
   console.log(`Output directory: ${bold(args.themes)}`);
-  console.log();
 
   await downloadThemesCommand({
     repositoryUrl: args.url,
@@ -63,20 +62,23 @@ if (args.command === "download-themes") {
 // Handle clear-themes subcommand
 if (args.command === "clear-themes") {
   console.log(`Clearing all themes from ${bold(args.themes)}...`);
-  console.log();
 
   await clearThemesCommand({
     themesPath: args.themes,
   }).match(
     (deletedPaths) => {
       console.log(
-        `\nSuccessfully deleted ${
+        `Successfully deleted ${
           bold(deletedPaths.length.toString())
         } theme(s) ✅`,
       );
       Deno.exit(0);
     },
     (error) => {
+      if (error._tag === "NoThemesFoundError") {
+        console.log("No themes found to delete. ✅");
+        Deno.exit(0);
+      }
       console.error("Failed to clear themes! ❌");
       console.error(error);
       Deno.exit(1);

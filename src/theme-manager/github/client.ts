@@ -235,7 +235,7 @@ class GitHubClient {
     outputPath: FilePath,
     onProgress?: (current: number, total: number) => void,
   ): ResultAsync<Theme[], GitHubClientError> {
-    // Download themes sequentially, then download the LICENSE file
+    // Download themes sequentially as to not fire too many requests at once
     return ResultAsync.fromPromise(
       this.downloadThemesSequentially(
         themes,
@@ -269,7 +269,8 @@ class GitHubClient {
       const theme = themes[i];
 
       // Download the theme
-      const result = await this.downloadTheme(theme.path, outputPath)
+      const result = await this
+        .downloadTheme(theme.path, outputPath)
         .toResult();
 
       if (result.isErr()) {

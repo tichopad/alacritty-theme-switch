@@ -24,7 +24,7 @@ export type ClearThemesOptions = {
 /** Type alias for the output of the clear-themes command. */
 type ClearThemesOutput = ResultAsync<
   FilePath[],
-  DirectoryNotAccessibleError | NoThemesFoundError | FileDeletionError[]
+  DirectoryNotAccessibleError | NoThemesFoundError | FileDeletionError
 >;
 
 /**
@@ -52,25 +52,25 @@ type ClearThemesOutput = ResultAsync<
 export function clearThemesCommand(
   options: ClearThemesOptions,
 ): ClearThemesOutput {
-  return safeWalkAll(options.themesPath, {
+  const allTomlFiles = safeWalkAll(options.themesPath, {
     exts: ["toml"],
     includeFiles: true,
     includeDirs: false,
-  }).flatMap(
-    (
-      entries,
-    ): ClearThemesOutput => {
-      // If no theme files found, return error
-      if (entries.length === 0) {
-        return ResultAsync.err(new NoThemesFoundError(options.themesPath));
-      }
+  });
 
-      const deleteResults = entries.map((entry) => {
-        // Delete the file and return the path
-        return safeDeleteFile(entry.path).map(() => entry.path as FilePath);
-      });
+  const deleteResults = allTomlFiles.flatMap((entries): ClearThemesOutput => {
+    // If no theme files found, return error
+    if (entries.length === 0) {
+      return ResultAsync.err(new NoThemesFoundError(options.themesPath));
+    }
 
-      return ResultAsync.allSettled(deleteResults);
-    },
-  );
+    const deleteResults = entries.map((entry) => {
+      // Delete the file and return the path
+      return safeDeleteFile(entry.path).map(() => entry.path as FilePath);
+    });
+
+    return ResultAsync.all(deleteResults);
+  });
+
+  return deleteResults;
 }
