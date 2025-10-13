@@ -230,6 +230,18 @@ export class ResultAsync<T, E> {
   }
 
   /**
+   * Executes a side effect function after the ResultAsync resolves, regardless of success or error.
+   * This is useful for cleanup operations or logging.
+   *
+   * @param f - Side effect function to execute
+   * @returns A new ResultAsync with the same result
+   */
+  finally(f: () => void): ResultAsync<T, E> {
+    const newPromise = this.promise.finally(f);
+    return new ResultAsync(newPromise);
+  }
+
+  /**
    * Converts this ResultAsync back to a Promise<Result<T, E>>.
    * This is useful when you need to await the result and handle it synchronously.
    *
