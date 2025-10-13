@@ -58,12 +58,12 @@ interface RepositoryInfo {
  * @internal
  */
 class GitHubClient {
-  private readonly owner: string;
-  private readonly repo: string;
-  private readonly ref: string;
-  private readonly apiBaseUrl = "https://api.github.com";
-  private readonly rawBaseUrl = "https://raw.githubusercontent.com";
-  private readonly token?: string;
+  readonly #owner: string;
+  readonly #repo: string;
+  readonly #ref: string;
+  readonly #apiBaseUrl = "https://api.github.com";
+  readonly #rawBaseUrl = "https://raw.githubusercontent.com";
+  readonly #token?: string;
 
   /**
    * Creates a new GitHub client for the specified repository.
@@ -79,10 +79,10 @@ class GitHubClient {
    * @internal
    */
   constructor(owner: string, repo: string, ref = "master", token?: string) {
-    this.owner = owner;
-    this.repo = repo;
-    this.ref = ref;
-    this.token = token;
+    this.#owner = owner;
+    this.#repo = repo;
+    this.#ref = ref;
+    this.#token = token;
   }
 
   /**
@@ -110,9 +110,9 @@ class GitHubClient {
    */
   listThemes(): ResultAsync<Theme[], GitHubClientError> {
     const url =
-      `${this.apiBaseUrl}/repos/${this.owner}/${this.repo}/git/trees/HEAD?recursive=1`;
+      `${this.#apiBaseUrl}/repos/${this.#owner}/${this.#repo}/git/trees/HEAD?recursive=1`;
 
-    return this.fetchJson<GitHubTreeResponse>(url)
+    return this.#fetchJson<GitHubTreeResponse>(url)
       .map((response) => {
         // Filter for TOML files only
         const tomlFiles = response.tree.filter(
@@ -158,10 +158,10 @@ class GitHubClient {
   ): ResultAsync<Theme, GitHubClientError> {
     // Construct raw content URL
     const url =
-      `${this.rawBaseUrl}/${this.owner}/${this.repo}/refs/heads/${this.ref}/${remotePath}`;
+      `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/refs/heads/${this.#ref}/${remotePath}`;
 
-    return this.ensureDirectory(outputPath)
-      .flatMap(() => this.fetchRawContent(url))
+    return this.#ensureDirectory(outputPath)
+      .flatMap(() => this.#fetchRawContent(url))
       .flatMap((content): ResultAsync<Theme, GitHubClientError> => {
         const filename = basename(remotePath);
         const localPath = join(outputPath, filename);
@@ -237,7 +237,7 @@ class GitHubClient {
   ): ResultAsync<Theme[], GitHubClientError> {
     // Download themes sequentially as to not fire too many requests at once
     return ResultAsync.fromPromise(
-      this.downloadThemesSequentially(
+      this.#downloadThemesSequentially(
         themes,
         outputPath,
         onProgress,
@@ -245,7 +245,7 @@ class GitHubClient {
       (error) => new FileDownloadError("multiple files", { cause: error }),
     ).flatMap((downloadedThemes) => {
       // Download the LICENSE file after all themes are downloaded
-      return this.downloadLicense(outputPath).map(() => downloadedThemes);
+      return this.#downloadLicense(outputPath).map(() => downloadedThemes);
     });
   }
 
@@ -257,7 +257,7 @@ class GitHubClient {
    * @param onProgress - Optional callback to report download progress
    * @returns Promise containing an array of downloaded themes or throws an error
    */
-  private async downloadThemesSequentially(
+  async #downloadThemesSequentially(
     themes: Theme[],
     outputPath: FilePath,
     onProgress?: (current: number, total: number) => void,
@@ -323,7 +323,7 @@ class GitHubClient {
    * }
    * ```
    */
-  private downloadLicense(
+  #downloadLicense(
     outputPath: FilePath,
   ): ResultAsync<void, GitHubClientError> {
     // Common license file naming conventions, in order of preference
@@ -336,9 +336,9 @@ class GitHubClient {
       "license.txt",
     ];
 
-    return this.ensureDirectory(outputPath)
+    return this.#ensureDirectory(outputPath)
       .flatMap(() =>
-        this.tryDownloadLicenseFiles(licenseFilenames, outputPath)
+        this.#tryDownloadLicenseFiles(licenseFilenames, outputPath)
       );
   }
 
@@ -353,12 +353,12 @@ class GitHubClient {
    * @param outputPath - Local directory path where the LICENSE should be saved
    * @returns A ResultAsync that resolves when a LICENSE is downloaded or all attempts fail with 404
    */
-  private tryDownloadLicenseFiles(
+  #tryDownloadLicenseFiles(
     filenames: string[],
     outputPath: FilePath,
   ): ResultAsync<void, GitHubClientError> {
     return new ResultAsync(
-      this.tryDownloadLicenseFilesSequentially(filenames, outputPath),
+      this.#tryDownloadLicenseFilesSequentially(filenames, outputPath),
     );
   }
 
@@ -373,13 +373,13 @@ class GitHubClient {
    * @param outputPath - Local directory path where the LICENSE should be saved
    * @returns A Promise<Result> that resolves when a LICENSE is downloaded or all attempts fail
    */
-  private async tryDownloadLicenseFilesSequentially(
+  async #tryDownloadLicenseFilesSequentially(
     filenames: string[],
     outputPath: FilePath,
   ): Promise<Result<void, GitHubClientError>> {
     for (const filename of filenames) {
       const url =
-        `${this.rawBaseUrl}/${this.owner}/${this.repo}/refs/heads/${this.ref}/${filename}`;
+        `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/refs/heads/${this.#ref}/${filename}`;
 
       const fetchResult = await ResultAsync.fromPromise(
         fetch(url),
@@ -419,7 +419,7 @@ class GitHubClient {
       }
 
       // Create a unique filename based on repository owner and name
-      const uniqueFilename = `LICENSE-${this.owner}-${this.repo}`;
+      const uniqueFilename = `LICENSE-${this.#owner}-${this.#repo}`;
       const localPath = join(outputPath, uniqueFilename);
 
       // Write LICENSE file to disk
@@ -442,15 +442,15 @@ class GitHubClient {
    * @param url - API endpoint URL
    * @returns A ResultAsync containing the parsed JSON response or an error
    */
-  private fetchJson<T>(url: string): ResultAsync<T, GitHubClientError> {
+  #fetchJson<T>(url: string): ResultAsync<T, GitHubClientError> {
     const headers: Record<string, string> = {
       "Accept": "application/vnd.github.v3+json",
       "User-Agent": "alacritty-theme-switch",
     };
 
     // Add authentication token if available
-    if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+    if (this.#token) {
+      headers["Authorization"] = `Bearer ${this.#token}`;
     }
 
     return ResultAsync.fromPromise(
@@ -484,7 +484,7 @@ class GitHubClient {
    * @param url - Raw content URL
    * @returns A ResultAsync containing the text content or an error
    */
-  private fetchRawContent(url: string): ResultAsync<string, GitHubClientError> {
+  #fetchRawContent(url: string): ResultAsync<string, GitHubClientError> {
     return ResultAsync.fromPromise(
       fetch(url),
       (error) => new FileDownloadError(url, { cause: error }),
@@ -513,7 +513,7 @@ class GitHubClient {
    * @param dirPath - Directory path to ensure
    * @returns A ResultAsync that resolves when the directory exists or an error
    */
-  private ensureDirectory(
+  #ensureDirectory(
     dirPath: FilePath,
   ): ResultAsync<void, GitHubClientError> {
     return ResultAsync.fromPromise(
