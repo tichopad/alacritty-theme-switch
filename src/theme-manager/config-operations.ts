@@ -84,7 +84,7 @@ export function checkThemeExists(filename: string, allThemes: Theme[]) {
 
 type LoadThemesOutput = ResultAsync<
   Theme[],
-  LoadThemesError | FileNotReadableError[]
+  LoadThemesError
 >;
 /**
  * Discovers and loads all TOML theme files from the specified directory.
@@ -112,7 +112,7 @@ export function loadThemes(themeDirPath: FilePath): LoadThemesOutput {
           );
         });
 
-        return ResultAsync.allSettled(themeResults);
+        return ResultAsync.all(themeResults);
       });
     });
 }

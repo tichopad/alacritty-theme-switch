@@ -61,6 +61,18 @@ if (args.command === "download-themes") {
 
 // Handle clear-themes subcommand
 if (args.command === "clear-themes") {
+  const decision = confirm(
+    `Are you sure you want to delete all themes from ${
+      bold(
+        args.themes,
+      )
+    }?`,
+  );
+  if (!decision) {
+    console.log("Cancelled. ✅");
+    Deno.exit(0);
+  }
+
   console.log(`Clearing all themes from ${bold(args.themes)}...`);
 
   await clearThemesCommand({
@@ -94,6 +106,10 @@ const managerResult = await createThemeManager({
 }).toResult();
 
 if (managerResult.isErr()) {
+  if (managerResult.error._tag === "NoThemesFoundError") {
+    console.log("No themes found. Use `ats download-themes` to download some.");
+    Deno.exit(0);
+  }
   console.error("Failed to create theme manager! ❌");
   console.error(managerResult.error);
   Deno.exit(1);

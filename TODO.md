@@ -1,4 +1,2 @@
 - [ ] Install script for the binary distribution
-- [ ] Employ arktype
-- [ ] When run with no themes, display a message to download themes
 - [ ] Release to Homebrew?
