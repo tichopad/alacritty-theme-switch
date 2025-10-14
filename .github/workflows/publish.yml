@@ -6,84 +6,153 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Tag to publish (leave empty to use latest tag)'
+        description: "Tag to publish (leave empty to use latest tag)"
         required: false
         type: string
       beta:
-        description: 'Publish as beta (npm --tag=beta)'
+        description: "Publish as beta (npm --tag=beta)"
         required: false
         type: boolean
         default: false
 
 jobs:
-  build:
-    name: Build and test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Begin CI
-        uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Clean install
-        run: npm ci
-      - name: Lint, formatting and test
-        run: npm test
-
-  publish-npm:
-    name: Publish
-    needs: build
+  publish:
+    name: Publish to NPM and JSR
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     steps:
-      - name: Begin CI
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
         with:
-          ref: main
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
         with:
-          node-version: 22
+          deno-version: v2.5.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
           registry-url: https://registry.npmjs.org/
-      - name: Get tag name and determine npm tag
-        id: get_tag
+
+      - name: Run checks
+        run: deno task check
+
+      - name: Run tests
+        run: deno task test
+
+      - name: Determine version and npm tag
+        id: version_info
         run: |
+          # Determine the version to use
           if [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
-            # Check if release is a pre-release
+            VERSION="${{ github.event.release.tag_name }}"
+            # Remove 'v' prefix if present
+            VERSION=${VERSION#v}
             if [ "${{ github.event.release.prerelease }}" = "true" ]; then
               echo "npm_tag=beta" >> $GITHUB_OUTPUT
             else
               echo "npm_tag=latest" >> $GITHUB_OUTPUT
             fi
           elif [ -n "${{ inputs.tag }}" ]; then
-            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
-            # Check if beta flag is set for manual trigger
+            VERSION="${{ inputs.tag }}"
+            # Remove 'v' prefix if present
+            VERSION=${VERSION#v}
             if [ "${{ inputs.beta }}" = "true" ]; then
               echo "npm_tag=beta" >> $GITHUB_OUTPUT
             else
               echo "npm_tag=latest" >> $GITHUB_OUTPUT
             fi
           else
-            # Get the latest tag
-            latest_tag=$(git describe --tags --abbrev=0)
-            echo "tag=$latest_tag" >> $GITHUB_OUTPUT
-            # Default to latest for auto-detected tags
-            echo "npm_tag=latest" >> $GITHUB_OUTPUT
+            echo "Error: No version specified"
+            exit 1
           fi
-      - name: Bump version
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+      - name: Bump deno.json version
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          npm version ${{ steps.get_tag.outputs.tag }} -m "Bump version to %s"
+          jq '.version = "${{ steps.version_info.outputs.version }}"' deno.json > deno.json.tmp
+          mv deno.json.tmp deno.json
+          cat deno.json
+          git add deno.json
+          git commit -m "Bump version to ${{ steps.version_info.outputs.version }}"
           git push
-      - name: Clean install
-        run: npm ci
+
+      - name: Build Node-compatible package
+        run: deno task build-npm
+
       - name: Publish to NPM
-        run: npm publish --provenance --access public --tag=${{ steps.get_tag.outputs.npm_tag }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd npm
+          npm publish --provenance --access public --tag=${{ steps.version_info.outputs.npm_tag }}
+
+      - name: Publish to JSR
+        run: npx jsr publish
+
+  build-binaries:
+    name: Build and Upload Binaries
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            output: ats-linux-x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            output: ats-darwin-x86_64
+          - os: macos-latest-xlarge
+            target: aarch64-apple-darwin
+            output: ats-darwin-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            output: ats-windows-x86_64.exe
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+
+      - name: Compile binary
+        run: |
+          deno compile \
+            --target ${{ matrix.target }} \
+            --allow-write \
+            --allow-env \
+            --allow-read \
+            --allow-net \
+            --output=${{ matrix.output }} \
+            ./src/main.ts
+
+      - name: Determine release tag
+        id: release_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "Error: No tag specified"
+            exit 1
+          fi
+
+      - name: Upload binary to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release_tag.outputs.tag }} ${{ matrix.output }} --clobber

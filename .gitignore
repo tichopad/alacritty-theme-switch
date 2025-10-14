@@ -87,5 +87,8 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-# Editor specific configuration
-.vscode/
+# NPM build output
+npm/
+
+# Binary output
+bin/

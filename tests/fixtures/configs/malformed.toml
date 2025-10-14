@@ -1,0 +1,10 @@
+# Malformed TOML file for testing error handling
+
+[general
+import = ["missing-bracket.toml"
+
+[font]
+size = "not-a-number"
+
+[window
+opacity = 0.9

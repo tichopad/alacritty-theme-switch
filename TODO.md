@@ -1,0 +1,2 @@
+- [ ] Install script for the binary distribution
+- [ ] Release to Homebrew?

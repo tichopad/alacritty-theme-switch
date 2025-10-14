@@ -1,0 +1,41 @@
+name: PR Checks
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+
+jobs:
+  build:
+    name: Build and test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Begin CI
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+
+      - name: Run checks
+        run: deno task check
+
+      - name: Run tests
+        run: deno task test
+
+      - name: Build NPM package
+        run: deno task build-npm
