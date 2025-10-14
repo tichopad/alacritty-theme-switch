@@ -97,3 +97,62 @@ jobs:
 
       - name: Publish to JSR
         run: npx jsr publish
+
+  build-binaries:
+    name: Build and Upload Binaries
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            output: ats-linux-x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            output: ats-darwin-x86_64
+          - os: macos-latest-xlarge
+            target: aarch64-apple-darwin
+            output: ats-darwin-aarch64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            output: ats-windows-x86_64.exe
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+
+      - name: Compile binary
+        run: |
+          deno compile \
+            --target ${{ matrix.target }} \
+            --allow-write \
+            --allow-env \
+            --allow-read \
+            --allow-net \
+            --output=${{ matrix.output }} \
+            ./src/main.ts
+
+      - name: Determine release tag
+        id: release_tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "Error: No tag specified"
+            exit 1
+          fi
+
+      - name: Upload binary to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release_tag.outputs.tag }} ${{ matrix.output }} --clobber
