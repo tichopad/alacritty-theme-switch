@@ -100,7 +100,7 @@ jobs:
         run: npx jsr publish
 
   build-binaries:
-    name: Build and Upload Binaries
+    name: Build and upload binaries
     runs-on: ${{ matrix.os }}
     permissions:
       contents: write
