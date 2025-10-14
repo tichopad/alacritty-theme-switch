@@ -1,4 +1,5 @@
 import { build, emptyDir } from "@deno/dnt";
+import { copy } from "@std/fs/copy";
 import denoJson from "../deno.json" with { type: "json" };
 
 await emptyDir("./npm");
@@ -44,6 +45,11 @@ await build({
     // steps to run after building and before running the tests
     await Deno.copyFile("LICENSE.md", "npm/LICENSE.md");
     await Deno.copyFile("README.md", "npm/README.md");
+
+    // Copy test fixtures directory so tests can access them
+    await copy("tests/fixtures", "npm/esm/tests/fixtures", {
+      overwrite: true,
+    });
 
     await injectShebang("./npm/esm/src/main.js");
   },
