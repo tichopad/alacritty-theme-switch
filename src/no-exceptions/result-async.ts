@@ -240,6 +240,43 @@ export class ResultAsync<T, E> {
   }
 
   /**
+   * Transforms the error value of this ResultAsync using a function that returns a Result or ResultAsync.
+   * This is useful for error recovery - converting an Err into an Ok, or transforming
+   * an error into a different error type.
+   * If this ResultAsync contains a success value, the function is not called and the value is preserved.
+   *
+   * @template U - The type of the success value in the returned Result from the callback
+   * @template A - The type of the error value in the returned Result from the callback
+   * @param f - Function that takes the error value and returns a Result or ResultAsync
+   * @returns A new ResultAsync from the function or the original success value
+   */
+  orElse<U, A>(
+    f: (error: E) => Result<U, A> | ResultAsync<U, A>,
+  ): ResultAsync<T | U, A> {
+    const newPromise = this.#promise.then(async (result) => {
+      if (result.isErr()) {
+        const mapped = f(result.error);
+
+        // Handle different return types
+        let mappedResult: Result<U, A>;
+        if (mapped instanceof ResultAsync) {
+          mappedResult = await mapped.toResult();
+        } else {
+          mappedResult = mapped;
+        }
+
+        // Reconstruct to get proper type widening
+        return mappedResult.isOk()
+          ? Result.ok<T | U>(mappedResult.data)
+          : Result.err<A>(mappedResult.error);
+      }
+      // Reconstruct Ok to avoid type cast
+      return Result.ok<T | U>(result.data);
+    });
+    return new ResultAsync(newPromise);
+  }
+
+  /**
    * Executes a side effect function after the ResultAsync resolves, regardless of success or error.
    * This is useful for cleanup operations or logging.
    *

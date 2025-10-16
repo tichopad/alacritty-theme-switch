@@ -113,14 +113,22 @@ Deno.test("parseConfig: fails with non-TOML file", async () => {
   assertEquals(result.error._tag, "FileNotTOMLError");
 });
 
-Deno.test("parseConfig: fails with nonexistent file", async () => {
+Deno.test("parseConfig: creates file if it doesn't exist", async () => {
   await using env = await createTestEnvironment();
   const nonExistentPath = `${env.tempDir}/nonexistent.toml`;
 
   const result = await parseConfig(nonExistentPath).toResult();
 
-  assertEquals(result.isErr(), true);
-  assertEquals(result.error._tag, "FileNotFoundError");
+  assertEquals(result.isOk(), true);
+  if (result.isOk()) {
+    // Should create a minimal config with empty imports
+    assertEquals(result.data.general?.import, []);
+  }
+  // Verify file was created
+  const fileExists = await Deno.stat(nonExistentPath).then(() => true).catch(
+    () => false,
+  );
+  assertEquals(fileExists, true);
 });
 
 Deno.test("parseConfig: fails when path is directory", async () => {
@@ -186,19 +194,24 @@ Deno.test("loadThemes: fails with empty directory", async () => {
   }
 });
 
-Deno.test("loadThemes: fails with nonexistent directory", async () => {
+Deno.test("loadThemes: creates directory if it doesn't exist", async () => {
   await using env = await createTestEnvironment();
   const nonExistentDir = `${env.tempDir}/nonexistent`;
 
   const result = await loadThemes(nonExistentDir).toResult();
 
+  // Should create the directory but return NoThemesFoundError since it's empty
   assertEquals(result.isErr(), true);
   if (result.isErr()) {
     if (Array.isArray(result.error)) {
       throw new Error("Expected single error, got array");
     }
-    assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+    assertEquals(result.error._tag, "NoThemesFoundError");
   }
+  // Verify directory was created
+  const dirExists = await Deno.stat(nonExistentDir).then((s) => s.isDirectory)
+    .catch(() => false);
+  assertEquals(dirExists, true);
 });
 
 Deno.test("loadThemes: fails when path is file", async () => {

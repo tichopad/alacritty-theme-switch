@@ -1,7 +1,7 @@
 import { parseArgs } from "@std/cli/parse-args";
 import { join } from "@std/path/join";
 import denoJson from "../deno.json" with { type: "json" };
-import type { FilePath } from "./theme-manager/types.ts";
+import type { FilePath } from "./types.ts";
 
 type PositionalCommand = "download-themes" | "clear-themes";
 

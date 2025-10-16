@@ -184,3 +184,164 @@ Deno.test("ResultAsync.match handles async Err", async () => {
 
   assertEquals(matched, "error: failure");
 });
+
+// Result.orElse tests
+Deno.test("Result.orElse passes through Ok unchanged", () => {
+  const result = Result.ok(42);
+  const recovered = result.orElse((_error: string) => Result.ok(0));
+
+  assertEquals(recovered.isOk(), true);
+  assertEquals(recovered.data, 42);
+});
+
+Deno.test("Result.orElse calls callback on Err", () => {
+  const result: Result<number, string> = Result.err("error");
+  const recovered = result.orElse((_error) => Result.ok(0));
+
+  assertEquals(recovered.isOk(), true);
+  assertEquals(recovered.data, 0);
+});
+
+Deno.test("Result.orElse can recover from error to Ok", () => {
+  enum DatabaseError {
+    NotFound = "NotFound",
+    ConnectionError = "ConnectionError",
+  }
+
+  const result: Result<string, DatabaseError> = Result.err(
+    DatabaseError.NotFound,
+  );
+
+  const recovered = result.orElse((error) =>
+    error === DatabaseError.NotFound
+      ? Result.ok("default-user")
+      : Result.err(500)
+  );
+
+  assertEquals(recovered.isOk(), true);
+  assertEquals(recovered.data, "default-user");
+});
+
+Deno.test("Result.orElse can transform error type", () => {
+  const result: Result<number, string> = Result.err("string error");
+  const transformed = result.orElse((_error) => Result.err(404));
+
+  assertEquals(transformed.isErr(), true);
+  assertEquals(transformed.error, 404);
+});
+
+Deno.test("Result.orElse preserves error from callback", () => {
+  enum DatabaseError {
+    NotFound = "NotFound",
+    ConnectionError = "ConnectionError",
+  }
+
+  const result: Result<string, DatabaseError> = Result.err(
+    DatabaseError.ConnectionError,
+  );
+
+  const recovered = result.orElse((error) =>
+    error === DatabaseError.NotFound
+      ? Result.ok("default-user")
+      : Result.err(500)
+  );
+
+  assertEquals(recovered.isErr(), true);
+  assertEquals(recovered.error, 500);
+});
+
+// ResultAsync.orElse tests
+Deno.test("ResultAsync.orElse passes through Ok unchanged", async () => {
+  const result = ResultAsync.ok(42);
+  const recovered = result.orElse((_error: string) => Result.ok(0));
+  const resolved = await recovered.toResult();
+
+  assertEquals(resolved.isOk(), true);
+  assertEquals(resolved.data, 42);
+});
+
+Deno.test("ResultAsync.orElse calls callback on Err with Result", async () => {
+  const result: ResultAsync<number, string> = ResultAsync.err("error");
+  const recovered = result.orElse((_error) => Result.ok(0));
+  const resolved = await recovered.toResult();
+
+  assertEquals(resolved.isOk(), true);
+  assertEquals(resolved.data, 0);
+});
+
+Deno.test(
+  "ResultAsync.orElse calls callback on Err with ResultAsync",
+  async () => {
+    const result: ResultAsync<number, string> = ResultAsync.err("error");
+    const recovered = result.orElse((_error) => ResultAsync.ok(0));
+    const resolved = await recovered.toResult();
+
+    assertEquals(resolved.isOk(), true);
+    assertEquals(resolved.data, 0);
+  },
+);
+
+Deno.test("ResultAsync.orElse can recover from error to Ok", async () => {
+  enum ApiError {
+    NotFound = "NotFound",
+    Unauthorized = "Unauthorized",
+  }
+
+  const result: ResultAsync<string, ApiError> = ResultAsync.err(
+    ApiError.NotFound,
+  );
+
+  const recovered = result.orElse((error) =>
+    error === ApiError.NotFound
+      ? Result.ok("default-data")
+      : ResultAsync.err(500)
+  );
+  const resolved = await recovered.toResult();
+
+  assertEquals(resolved.isOk(), true);
+  assertEquals(resolved.data, "default-data");
+});
+
+Deno.test("ResultAsync.orElse can transform error type", async () => {
+  const result: ResultAsync<number, string> = ResultAsync.err("string error");
+  const transformed = result.orElse((_error) => Result.err(404));
+  const resolved = await transformed.toResult();
+
+  assertEquals(resolved.isErr(), true);
+  assertEquals(resolved.error, 404);
+});
+
+Deno.test(
+  "ResultAsync.orElse can transform error type with ResultAsync",
+  async () => {
+    const result: ResultAsync<number, string> = ResultAsync.err(
+      "string error",
+    );
+    const transformed = result.orElse((_error) => ResultAsync.err(404));
+    const resolved = await transformed.toResult();
+
+    assertEquals(resolved.isErr(), true);
+    assertEquals(resolved.error, 404);
+  },
+);
+
+Deno.test("ResultAsync.orElse preserves error from callback", async () => {
+  enum ApiError {
+    NotFound = "NotFound",
+    Unauthorized = "Unauthorized",
+  }
+
+  const result: ResultAsync<string, ApiError> = ResultAsync.err(
+    ApiError.Unauthorized,
+  );
+
+  const recovered = result.orElse((error) =>
+    error === ApiError.NotFound
+      ? Result.ok("default-data")
+      : ResultAsync.err(500)
+  );
+  const resolved = await recovered.toResult();
+
+  assertEquals(resolved.isErr(), true);
+  assertEquals(resolved.error, 500);
+});

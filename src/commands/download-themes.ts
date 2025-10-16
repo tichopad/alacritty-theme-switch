@@ -16,7 +16,7 @@ import type {
   InvalidRepositoryUrlError,
 } from "../theme-manager/github/errors.ts";
 import type { Theme } from "../theme-manager/theme.ts";
-import type { FilePath } from "../theme-manager/types.ts";
+import type { FilePath } from "../types.ts";
 
 /**
  * Options for the download-themes command.

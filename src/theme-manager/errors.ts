@@ -21,15 +21,6 @@ export class BackupError extends Error {
   }
 }
 
-export class WriteError extends Error {
-  readonly _tag = "WriteError";
-  path: string;
-  constructor(path: string, options?: ErrorOptions) {
-    super(`Failed to write to ${path}.`, options);
-    this.path = path;
-  }
-}
-
 export class ThemeNotFoundError extends Error {
   readonly _tag = "ThemeNotFoundError";
   filename: string;
@@ -85,4 +76,5 @@ export type LoadThemesError =
   | DirectoryNotDirectoryError
   | DirectoryNotAccessibleError
   | NoThemesFoundError
-  | FileNotReadableError;
+  | FileNotReadableError
+  | FileNotFoundError;

@@ -4,7 +4,7 @@ import { DirectoryCreateError } from "../../errors/file-and-dir-errors.ts";
 import { Result } from "../../no-exceptions/result.ts";
 import { ResultAsync } from "../../no-exceptions/result-async.ts";
 import { Theme } from "../theme.ts";
-import type { FilePath } from "../types.ts";
+import type { FilePath } from "../../types.ts";
 import { safeParseTomlContent } from "../utils.ts";
 import {
   FileDownloadError,

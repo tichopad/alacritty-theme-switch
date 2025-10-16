@@ -7,7 +7,7 @@ import {
   writeConfigToFile,
 } from "./config-operations.ts";
 import { Theme } from "./theme.ts";
-import type { Config, FilePath } from "./types.ts";
+import type { Config, FilePath } from "../types.ts";
 
 /**
  * Theme manager encapsulates all operations related to theme management.

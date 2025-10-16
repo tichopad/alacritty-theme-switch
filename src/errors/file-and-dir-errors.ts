@@ -113,3 +113,15 @@ export class DirectoryCreateError extends Error {
     this.path = path;
   }
 }
+
+/**
+ * Error thrown when writing to a file fails.
+ */
+export class WriteError extends Error {
+  readonly _tag = "WriteError";
+  path: string;
+  constructor(path: string, options?: ErrorOptions) {
+    super(`Failed to write to ${path}.`, options);
+    this.path = path;
+  }
+}

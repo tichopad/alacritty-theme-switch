@@ -29,46 +29,51 @@ Deno.test("createThemeManager: successfully creates manager", async () => {
   assertEquals(typeof manager.applyThemeByFilename, "function");
 });
 
-Deno.test("createThemeManager: fails with invalid config", async () => {
+Deno.test("createThemeManager: creates config if it doesn't exist", async () => {
   await using env = await createTestEnvironment();
-  const invalidConfigPath = `${env.tempDir}/nonexistent.toml`;
+  const nonExistentConfigPath = `${env.tempDir}/nonexistent.toml`;
 
   await createTestThemes(env.themesDir, ["theme1"]);
 
   const result = await createThemeManager({
-    configPath: invalidConfigPath,
+    configPath: nonExistentConfigPath,
     themesDirPath: env.themesDir,
     backupPath: env.backupPath,
   }).toResult();
 
-  assertEquals(result.isErr(), true);
-  if (result.isErr()) {
-    if (Array.isArray(result.error)) {
-      throw new Error("Expected single error, got array");
-    }
-    assertEquals(result.error._tag, "FileNotFoundError");
-  }
+  // Should succeed and create the config file
+  assertEquals(result.isOk(), true);
+  // Verify file was created
+  const fileExists = await Deno.stat(nonExistentConfigPath).then(() => true)
+    .catch(() => false);
+  assertEquals(fileExists, true);
 });
 
-Deno.test("createThemeManager: fails with invalid themes directory", async () => {
+Deno.test("createThemeManager: creates themes directory if it doesn't exist", async () => {
   await using env = await createTestEnvironment();
-  const invalidThemesDir = `${env.tempDir}/nonexistent`;
+  const nonExistentThemesDir = `${env.tempDir}/nonexistent`;
 
   await writeTestConfig(env.configPath, createBasicConfig());
 
   const result = await createThemeManager({
     configPath: env.configPath,
-    themesDirPath: invalidThemesDir,
+    themesDirPath: nonExistentThemesDir,
     backupPath: env.backupPath,
   }).toResult();
 
+  // Should fail with NoThemesFoundError since the directory is empty
   assertEquals(result.isErr(), true);
   if (result.isErr()) {
     if (Array.isArray(result.error)) {
       throw new Error("Expected single error, got array");
     }
-    assertEquals(result.error._tag, "DirectoryNotAccessibleError");
+    assertEquals(result.error._tag, "NoThemesFoundError");
   }
+  // Verify directory was created
+  const dirExists = await Deno.stat(nonExistentThemesDir).then((s) =>
+    s.isDirectory
+  ).catch(() => false);
+  assertEquals(dirExists, true);
 });
 
 Deno.test("ThemeManager.getConfig: returns current config", async () => {

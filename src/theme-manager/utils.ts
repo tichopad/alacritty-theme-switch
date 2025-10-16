@@ -3,7 +3,7 @@ import { FileNotReadableError } from "../errors/file-and-dir-errors.ts";
 import { Result } from "../no-exceptions/result.ts";
 import { ResultAsync } from "../no-exceptions/result-async.ts";
 import { TomlParseError } from "./errors.ts";
-import type { FilePath } from "./types.ts";
+import type { FilePath } from "../types.ts";
 
 /**
  * Check if a word is a Roman numeral (I-X).

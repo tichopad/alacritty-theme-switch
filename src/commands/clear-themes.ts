@@ -10,7 +10,7 @@ import type {
 } from "../errors/file-and-dir-errors.ts";
 import { ResultAsync } from "../no-exceptions/result-async.ts";
 import { NoThemesFoundError } from "../theme-manager/errors.ts";
-import type { FilePath } from "../theme-manager/types.ts";
+import type { FilePath } from "../types.ts";
 import { safeDeleteFile, safeWalkAll } from "../utils.ts";
 
 /**

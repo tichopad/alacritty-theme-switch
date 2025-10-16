@@ -44,6 +44,30 @@ function divide(a: number, b: number): Result<number, string> {
 const result = Result.ok(10)
   .flatMap((x) => divide(x, 2)) // Ok(5)
   .flatMap((x) => divide(x, 0)); // Err("Division by zero")
+
+// OrElse handles errors and allows recovery
+enum DatabaseError {
+  NotFound = "NotFound",
+  ConnectionError = "ConnectionError",
+}
+
+const dbResult: Result<string, DatabaseError> = Result.err(
+  DatabaseError.NotFound,
+);
+
+// Error recovery: convert specific errors to default values
+const recovered = dbResult.orElse(
+  (error) =>
+    error === DatabaseError.NotFound
+      ? Result.ok("default-user") // Recover with a default value
+      : Result.err(500), // Transform to a different error type
+);
+// recovered is Ok("default-user")
+
+// OrElse passes through Ok values unchanged
+const okResult = Result.ok("existing-user");
+const stillOk = okResult.orElse((error) => Result.ok("default-user"));
+// stillOk is Ok("existing-user")
 ```
 
 ## ResultAsync
@@ -90,6 +114,30 @@ const user = ResultAsync.ok("user123")
 // MapErr transforms error values
 const result = ResultAsync.fromPromise(fetch("/api/data")).mapErr(
   (error) => `Request failed: ${error.message}`,
+);
+
+// OrElse handles errors and allows recovery (can return Result or ResultAsync)
+enum ApiError {
+  NotFound = "NotFound",
+  Unauthorized = "Unauthorized",
+}
+
+const apiResult: ResultAsync<string, ApiError> = ResultAsync.err(
+  ApiError.NotFound,
+);
+
+// Error recovery with synchronous Result
+const recovered = apiResult.orElse((error) =>
+  error === ApiError.NotFound
+    ? Result.ok("default-data") // Recover with Result
+    : Result.err(500)
+);
+
+// Error recovery with asynchronous ResultAsync
+const recoveredAsync = apiResult.orElse((error) =>
+  error === ApiError.NotFound
+    ? ResultAsync.fromPromise(fetchDefaultData()) // Recover with ResultAsync
+    : ResultAsync.err(500)
 );
 
 // Finally executes cleanup code regardless of success or error

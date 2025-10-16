@@ -176,6 +176,47 @@ export class Result<T, E> {
   }
 
   /**
+   * Transforms the error value of this Result using a function that returns another Result.
+   * This is useful for error recovery - converting an Err into an Ok, or transforming
+   * an error into a different error type.
+   * If this Result is an Ok, the function is not called and the success value is preserved.
+   *
+   * @template U - The type of the success value in the returned Result from the callback
+   * @template A - The type of the error value in the returned Result from the callback
+   * @param f - Function that takes the error value and returns a new Result
+   * @returns A new Result from the function or the original success value
+   *
+   * @example
+   * ```typescript
+   * enum DatabaseError {
+   *   NotFound = 'NotFound',
+   *   ConnectionError = 'ConnectionError',
+   * }
+   *
+   * const dbResult: Result<string, DatabaseError> = Result.err(DatabaseError.NotFound);
+   *
+   * // Error recovery: convert NotFound error to a default value
+   * const recovered = dbResult.orElse((error) =>
+   *   error === DatabaseError.NotFound
+   *     ? Result.ok('default-user')
+   *     : Result.err(500)
+   * );
+   * // recovered is Ok('default-user')
+   * ```
+   */
+  orElse<U, A>(f: (error: E) => Result<U, A>): Result<T | U, A> {
+    if (this.#variant._tag === "err") {
+      const mapped = f(this.#variant.value);
+      // Reconstruct to get proper type widening
+      return mapped.isOk()
+        ? Result.ok<T | U>(mapped.data)
+        : Result.err<A>(mapped.error);
+    }
+    // Reconstruct Ok to avoid type cast
+    return Result.ok<T | U>(this.#variant.value);
+  }
+
+  /**
    * Converts this Result to a plain JavaScript object for JSON serialization.
    * The object will have a _tag field indicating the variant and either a data or error field.
    *

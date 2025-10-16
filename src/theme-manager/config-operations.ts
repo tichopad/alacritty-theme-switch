@@ -1,4 +1,5 @@
 import { copy } from "@std/fs/copy";
+import { dirname } from "@std/path/dirname";
 import { stringify } from "@std/toml/stringify";
 import {
   DirectoryIsFileError,
@@ -8,9 +9,15 @@ import {
   FileNotFoundError,
   FileNotReadableError,
   FileNotTOMLError,
+  WriteError,
 } from "../errors/file-and-dir-errors.ts";
 import { ResultAsync } from "../no-exceptions/result-async.ts";
-import { safeWalkAll } from "../utils.ts";
+import {
+  safeEnsureDir,
+  safeStat,
+  safeWalkAll,
+  safeWriteFile,
+} from "../utils.ts";
 import {
   BackupError,
   type LoadThemesError,
@@ -18,10 +25,9 @@ import {
   type ParseConfigError,
   ThemeNotFoundError,
   ThemeNotTOMLError,
-  WriteError,
 } from "./errors.ts";
 import { Theme } from "./theme.ts";
-import type { Config, FilePath } from "./types.ts";
+import type { Config, FilePath } from "../types.ts";
 import { isToml, safeParseToml } from "./utils.ts";
 
 /**
@@ -45,24 +51,46 @@ export function writeConfigToFile(path: string, config: Config) {
 }
 
 /**
+ * Ensures the configuration file exists, creating it with minimal config if needed.
+ */
+function ensureConfigFile(configPath: FilePath) {
+  return safeStat(configPath)
+    .map(() => null)
+    .orElse(() => {
+      const parentDir = dirname(configPath);
+      return safeEnsureDir(parentDir).flatMap(() => {
+        const minimalConfig: Config = {
+          general: {
+            import: [],
+          },
+        };
+        return safeWriteFile(configPath, stringify(minimalConfig));
+      });
+    });
+}
+
+/**
  * Parses an Alacritty configuration file from TOML format.
+ * Creates the file with minimal configuration if it doesn't exist.
  */
 export function parseConfig(configPath: FilePath) {
   if (!isToml(configPath)) {
     return ResultAsync.err(new FileNotTOMLError(configPath));
   }
 
-  return validateFile(configPath).flatMap(
-    (stat): ResultAsync<Config, ParseConfigError> => {
-      if (stat.isDirectory) {
-        return ResultAsync.err(new FileIsDirectoryError(configPath));
-      }
-      if (!stat.isFile) {
-        return ResultAsync.err(new FileNotReadableError(configPath));
-      }
-      return safeParseToml(configPath);
-    },
-  );
+  return ensureConfigFile(configPath).flatMap(() => {
+    return validateFile(configPath).flatMap(
+      (stat): ResultAsync<Config, ParseConfigError> => {
+        if (stat.isDirectory) {
+          return ResultAsync.err(new FileIsDirectoryError(configPath));
+        }
+        if (!stat.isFile) {
+          return ResultAsync.err(new FileNotReadableError(configPath));
+        }
+        return safeParseToml(configPath);
+      },
+    );
+  });
 }
 
 /**
@@ -82,6 +110,25 @@ export function checkThemeExists(filename: string, allThemes: Theme[]) {
   return validateFile(theme.path).map(() => theme);
 }
 
+function ensureThemesDirectory(themeDirPath: FilePath) {
+  return safeStat(themeDirPath)
+    .flatMap((stat) => {
+      if (stat.isFile) {
+        return ResultAsync.err(new DirectoryIsFileError(themeDirPath));
+      }
+      return ResultAsync.ok(stat);
+    })
+    .orElse((error) => {
+      // If the path doesn't exist, that's fine - we'll create it
+      if (error._tag === "FileNotFoundError") {
+        return ResultAsync.ok(null);
+      }
+      // Any other error should be propagated
+      return ResultAsync.err(error);
+    })
+    .flatMap(() => safeEnsureDir(themeDirPath));
+}
+
 type LoadThemesOutput = ResultAsync<
   Theme[],
   LoadThemesError
@@ -89,12 +136,14 @@ type LoadThemesOutput = ResultAsync<
 /**
  * Discovers and loads all TOML theme files from the specified directory.
  * Detects the brightness (light/dark) of each theme by parsing its content.
+ * Creates the themes directory if it doesn't exist.
  *
  * If any theme file cannot be read or parsed, the entire operation fails with
  * an error indicating which file caused the problem.
  */
 export function loadThemes(themeDirPath: FilePath): LoadThemesOutput {
-  return validateDir(themeDirPath)
+  return ensureThemesDirectory(themeDirPath)
+    .flatMap(() => validateDir(themeDirPath))
     .flatMap(() => {
       const entriesResult = safeWalkAll(themeDirPath, {
         exts: ["toml"],
