@@ -1,15 +1,13 @@
-import search from "@inquirer/search";
 import {
   bold,
   getArgs,
   getHomeDir,
+  interactiveThemesSelection,
   printHelp,
   printVersion,
-  underscore,
 } from "./cli.ts";
 import { clearThemesCommand } from "./commands/clear-themes.ts";
 import { downloadThemesCommand } from "./commands/download-themes.ts";
-import { ResultAsync } from "./no-exceptions/result-async.ts";
 import { createThemeManager } from "./theme-manager/theme-manager.ts";
 
 const args = getArgs(Deno.args, getHomeDir(Deno.build.os), Deno.build.os);
@@ -103,11 +101,13 @@ const managerResult = await createThemeManager({
   configPath: args.config,
   themesDirPath: args.themes,
   backupPath: args.backup,
-}).toResult();
+});
 
 if (managerResult.isErr()) {
   if (managerResult.error._tag === "NoThemesFoundError") {
-    console.log("No themes found. Use `ats download-themes` to download some.");
+    console.log(
+      "No themes found. Use `ats download-themes` to download some.",
+    );
     Deno.exit(0);
   }
   console.error("Failed to create theme manager! ❌");
@@ -115,9 +115,9 @@ if (managerResult.isErr()) {
   Deno.exit(1);
 }
 
-const manager = managerResult.data;
+const manager = managerResult.value;
 
-// If a theme is selected by a CLI arg, apply it  and quit
+// Handle --select flag which skips the interactive prompt
 if (args.select !== undefined) {
   await manager
     .applyThemeByFilename(args.select)
@@ -132,81 +132,28 @@ if (args.select !== undefined) {
         Deno.exit(1);
       },
     );
+  Deno.exit(0);
 }
 
-// Else prompt user to select a theme
-const themes = manager.listThemes();
-const activeTheme = themes.find((t) => t.isCurrentlyActive);
-
-await ResultAsync.fromPromise(
-  search({
-    message: activeTheme
-      ? `Select Alacritty color theme (current: ${activeTheme.label})`
-      : `Select Alacritty color theme`,
-    instructions: {
-      navigation: "Use arrow keys to navigate (or type to search)",
-      pager: "Use space to select and enter to confirm",
-    },
-    pageSize: 10,
-    source: (input) => {
-      return themes
-        .filter((theme) => {
-          // If no input, show all themes
-          if (!input) {
-            return true;
-          }
-          // Match on brightness
-          if (/^light|dark$/i.test(input)) {
-            return theme.brightness === input.trim().toLowerCase();
-          }
-          // Dumb fuzzy matching
-          const inputWords = input.split(/\s+/);
-          const allMatch = inputWords.every((word) =>
-            theme.label.toLowerCase().includes(word.toLowerCase())
-          );
-          if (allMatch) {
-            return true;
-          }
-          return false;
-        })
-        .sort((a, b) => {
-          // Sort by brightness first (dark before light)
-          if (a.brightness !== b.brightness) {
-            return a.brightness === "dark" ? -1 : 1;
-          }
-          // Then sort alphabetically by label
-          return a.label.localeCompare(b.label, undefined, { numeric: true });
-        })
-        .map((theme) => {
-          // Add brightness indicator to theme name
-          const brightnessIcon = theme.brightness === "light" ? "☀️ " : "🌙";
-          const themeName = `${brightnessIcon} ${theme.label}`;
-
-          return {
-            name: theme.isCurrentlyActive
-              ? underscore(bold(themeName) + " ✨")
-              : themeName,
-            value: theme,
-          };
-        });
-    },
-  }),
-  (error) => error,
-)
-  .flatMap((selectedTheme) => manager.applyTheme(selectedTheme))
+// Else display interactive prompt
+await interactiveThemesSelection(manager)
+  .andThen((selectedTheme) => manager.applyTheme(selectedTheme))
   .match(
     (appliedTheme) => {
       console.log(`Applied theme ${bold(appliedTheme.label)} ✅`);
       Deno.exit(0);
     },
     (error) => {
-      // Handle Ctrl+C gracefully
-      if (error instanceof Error && error.name === "ExitPromptError") {
-        console.log("\nExiting...");
+      // Handle (SIGINT) Ctrl+C gracefully
+      if (error._tag === "ExitPromptError") {
+        console.log("Cancelled. ✅");
         Deno.exit(0);
       }
+
       console.log("Failed to apply theme! ❌");
       console.error(error);
       Deno.exit(1);
     },
   );
+
+Deno.exit(0);

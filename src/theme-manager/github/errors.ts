@@ -1,11 +1,4 @@
 /**
- * Module for defining custom error types for the GitHub client.
- */
-
-import type { DirectoryCreateError } from "../../errors/file-and-dir-errors.ts";
-import type { TomlParseError } from "../errors.ts";
-
-/**
  * Error thrown when a repository URL format is invalid.
  */
 export class InvalidRepositoryUrlError extends Error {
@@ -74,13 +67,12 @@ export class ThemeNotFoundInRepoError extends Error {
 }
 
 /**
- * Union type of all possible GitHub client errors.
+ * Error thrown when no license file is found in the repository.
  */
-export type GitHubClientError =
-  | InvalidRepositoryUrlError
-  | GitHubApiError
-  | FileDownloadError
-  | FileWriteError
-  | DirectoryCreateError
-  | ThemeNotFoundInRepoError
-  | TomlParseError;
+export class NoLicenseFileFoundError extends Error {
+  readonly _tag = "NoLicenseFileFoundError";
+
+  constructor(options?: ErrorOptions) {
+    super(`No license file found in repository`, options);
+  }
+}

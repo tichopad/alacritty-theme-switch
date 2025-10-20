@@ -1,3 +1,2 @@
 - [ ] Install script for the binary distribution
-- [ ] Creates themes directory and config file if it doesn't exist
 - [ ] Release to Homebrew?

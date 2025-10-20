@@ -1,17 +1,27 @@
-import { ensureDir } from "@std/fs/ensure-dir";
 import { basename, join } from "@std/path";
-import { DirectoryCreateError } from "../../errors/file-and-dir-errors.ts";
-import { Result } from "../../no-exceptions/result.ts";
-import { ResultAsync } from "../../no-exceptions/result-async.ts";
+import {
+  err,
+  errAsync,
+  fromPromise,
+  fromSafePromise,
+  ok,
+  okAsync,
+  Result,
+  type ResultAsync,
+} from "neverthrow";
+import pMap from "p-map";
+import {
+  type FilePath,
+  safeEnsureDir,
+  safeWriteFile,
+} from "../../utils/fs-utils.ts";
+import { safeParseTomlContent } from "../../utils/toml-utils.ts";
 import { Theme } from "../theme.ts";
-import type { FilePath } from "../../types.ts";
-import { safeParseTomlContent } from "../utils.ts";
 import {
   FileDownloadError,
-  FileWriteError,
   GitHubApiError,
-  type GitHubClientError,
   InvalidRepositoryUrlError,
+  NoLicenseFileFoundError,
 } from "./errors.ts";
 
 /**
@@ -93,22 +103,8 @@ class GitHubClient {
    * remote path in the repository.
    *
    * @returns A ResultAsync containing an array of themes or an error
-   *
-   * @example
-   * ```typescript
-   * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
-   * const result = await client.listThemes().toResult();
-   *
-   * if (result.isOk()) {
-   *   result.data.forEach(theme => {
-   *     console.log(`${theme.label}: ${theme.path}`);
-   *   });
-   * } else {
-   *   console.error("Failed to list themes:", result.error);
-   * }
-   * ```
    */
-  listThemes(): ResultAsync<Theme[], GitHubClientError> {
+  listThemes() {
     const url =
       `${this.#apiBaseUrl}/repos/${this.#owner}/${this.#repo}/git/trees/HEAD?recursive=1`;
 
@@ -138,42 +134,35 @@ class GitHubClient {
    * @returns A ResultAsync containing the downloaded theme with local path or an error
    *
    * @example
-   * ```typescript
    * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
    * const result = await client.downloadTheme(
    *   "themes/monokai_pro.toml",
    *   "./my-themes"
-   * ).toResult();
+   * )
    *
    * if (result.isOk()) {
    *   console.log(`Downloaded theme to: ${result.data.path}`);
    * } else {
    *   console.error("Download failed:", result.error);
    * }
-   * ```
    */
   downloadTheme(
     remotePath: string,
     outputPath: FilePath,
-  ): ResultAsync<Theme, GitHubClientError> {
+  ) {
     // Construct raw content URL
-    const url =
-      `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/refs/heads/${this.#ref}/${remotePath}`;
+    const repoUrl = `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/`;
+    const url = new URL(`${repoUrl}/refs/heads/${this.#ref}/${remotePath}`);
 
-    return this.#ensureDirectory(outputPath)
-      .flatMap(() => this.#fetchRawContent(url))
-      .flatMap((content): ResultAsync<Theme, GitHubClientError> => {
+    return safeEnsureDir(outputPath)
+      .andThen(() => this.#fetchRawContent(url.toString()))
+      .andThen((content) => {
         const filename = basename(remotePath);
         const localPath = join(outputPath, filename);
 
-        // Parse theme content and convert Result to ResultAsync
-        return ResultAsync.fromResult(safeParseTomlContent(content))
-          .flatMap((themeContent) => {
-            // Write file to disk
-            return ResultAsync.fromPromise(
-              Deno.writeTextFile(localPath, content),
-              (error) => new FileWriteError(localPath, { cause: error }),
-            ).map(() => {
+        return safeParseTomlContent(content)
+          .asyncAndThen((themeContent) => {
+            return safeWriteFile(localPath, content).map(() => {
               return new Theme(localPath, themeContent, null);
             });
           });
@@ -198,10 +187,10 @@ class GitHubClient {
    * @example
    * ```typescript
    * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
-   * const themesResult = await client.listThemes().toResult();
+   * const themesResult = await client.listThemes()
    *
    * if (themesResult.isOk()) {
-   *   const result = await client.downloadAllThemes(themesResult.data, "./my-themes").toResult();
+   *   const result = await client.downloadAllThemes(themesResult.data, "./my-themes")
    *
    *   if (result.isOk()) {
    *     console.log(`Downloaded ${result.data.length} themes`);
@@ -217,7 +206,7 @@ class GitHubClient {
    * @example With progress callback
    * ```typescript
    * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
-   * const themesResult = await client.listThemes().toResult();
+   * const themesResult = await client.listThemes()
    *
    * if (themesResult.isOk()) {
    *   const result = await client.downloadAllThemes(
@@ -226,7 +215,7 @@ class GitHubClient {
    *     (current, total) => {
    *       console.log(`Progress: ${current}/${total}`);
    *     }
-   *   ).toResult();
+   *   )
    * }
    * ```
    */
@@ -234,58 +223,24 @@ class GitHubClient {
     themes: Theme[],
     outputPath: FilePath,
     onProgress?: (current: number, total: number) => void,
-  ): ResultAsync<Theme[], GitHubClientError> {
-    // Download themes sequentially as to not fire too many requests at once
-    return ResultAsync.fromPromise(
-      this.#downloadThemesSequentially(
-        themes,
-        outputPath,
-        onProgress,
-      ),
-      (error) => new FileDownloadError("multiple files", { cause: error }),
-    ).flatMap((downloadedThemes) => {
-      // Download the LICENSE file after all themes are downloaded
-      return this.#downloadLicense(outputPath).map(() => downloadedThemes);
-    });
-  }
+  ) {
+    const downloadResultsPromises = pMap(
+      themes,
+      async (theme) => {
+        const downloaded = await this.downloadTheme(theme.path, outputPath);
+        onProgress?.(themes.indexOf(theme) + 1, themes.length);
+        return downloaded;
+      },
+      { concurrency: 10 },
+    );
 
-  /**
-   * Downloads themes sequentially.
-   *
-   * @param themes - Array of themes to download
-   * @param outputPath - Local directory path where themes should be saved
-   * @param onProgress - Optional callback to report download progress
-   * @returns Promise containing an array of downloaded themes or throws an error
-   */
-  async #downloadThemesSequentially(
-    themes: Theme[],
-    outputPath: FilePath,
-    onProgress?: (current: number, total: number) => void,
-  ): Promise<Theme[]> {
-    const downloadedThemes: Theme[] = [];
-    const total = themes.length;
+    const downloadResult = fromSafePromise(downloadResultsPromises)
+      .andThen((results) => Result.combine(results))
+      .andThen((themes) => {
+        return this.#downloadLicense(outputPath).map(() => themes); // Return themes
+      });
 
-    for (let i = 0; i < themes.length; i++) {
-      const theme = themes[i];
-
-      // Download the theme
-      const result = await this
-        .downloadTheme(theme.path, outputPath)
-        .toResult();
-
-      if (result.isErr()) {
-        throw result.error;
-      }
-
-      downloadedThemes.push(result.data);
-
-      // Report progress
-      if (onProgress) {
-        onProgress(i + 1, total);
-      }
-    }
-
-    return downloadedThemes;
+    return downloadResult;
   }
 
   /**
@@ -312,20 +267,18 @@ class GitHubClient {
    * @returns A ResultAsync that resolves when the LICENSE is downloaded or an error
    *
    * @example
-   * ```typescript
    * const client = new GitHubClient("https://github.com/alacritty/alacritty-theme");
-   * const result = await client.downloadLicense("./my-themes").toResult();
+   * const result = await client.downloadLicense("./my-themes");
    *
    * if (result.isOk()) {
    *   console.log("LICENSE file downloaded successfully");
    * } else {
    *   console.error("Failed to download LICENSE:", result.error);
    * }
-   * ```
    */
   #downloadLicense(
     outputPath: FilePath,
-  ): ResultAsync<void, GitHubClientError> {
+  ) {
     // Common license file naming conventions, in order of preference
     const licenseFilenames = [
       "LICENSE",
@@ -336,30 +289,11 @@ class GitHubClient {
       "license.txt",
     ];
 
-    return this.#ensureDirectory(outputPath)
-      .flatMap(() =>
-        this.#tryDownloadLicenseFiles(licenseFilenames, outputPath)
-      );
-  }
-
-  /**
-   * Attempts to download license files by trying multiple filenames in order.
-   *
-   * This method tries each filename in the provided array until one is successfully
-   * downloaded. If all attempts result in 404 errors, it silently succeeds. Any other
-   * error is propagated.
-   *
-   * @param filenames - Array of license filenames to try
-   * @param outputPath - Local directory path where the LICENSE should be saved
-   * @returns A ResultAsync that resolves when a LICENSE is downloaded or all attempts fail with 404
-   */
-  #tryDownloadLicenseFiles(
-    filenames: string[],
-    outputPath: FilePath,
-  ): ResultAsync<void, GitHubClientError> {
-    return new ResultAsync(
-      this.#tryDownloadLicenseFilesSequentially(filenames, outputPath),
-    );
+    return safeEnsureDir(outputPath)
+      .map(() =>
+        this.#tryDownloadLicenseFilesSequentially(licenseFilenames, outputPath)
+      )
+      .andThen((result) => result);
   }
 
   /**
@@ -376,63 +310,38 @@ class GitHubClient {
   async #tryDownloadLicenseFilesSequentially(
     filenames: string[],
     outputPath: FilePath,
-  ): Promise<Result<void, GitHubClientError>> {
+  ) {
     for (const filename of filenames) {
-      const url =
-        `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/refs/heads/${this.#ref}/${filename}`;
-
-      const fetchResult = await ResultAsync.fromPromise(
-        fetch(url),
-        (error) => new FileDownloadError(url, { cause: error }),
-      ).toResult();
-
-      if (fetchResult.isErr()) {
-        return fetchResult;
+      const result = await this.#tryDownloadLicenseFile(filename, outputPath);
+      if (result.isOk()) {
+        return result;
       }
+    }
+    return err(new NoLicenseFileFoundError());
+  }
 
-      const response = fetchResult.data;
+  /**
+   * Attempts to download a single license file.
+   *
+   * @param remoteFilename - License filename to try (e.g., "LICENSE")
+   * @param outputPath - Local directory path where the LICENSE should be saved
+   * @returns A ResultAsync that resolves when the LICENSE is downloaded or an error
+   */
+  #tryDownloadLicenseFile(
+    remoteFilename: string,
+    outputPath: FilePath,
+  ) {
+    const repoUrl = `${this.#rawBaseUrl}/${this.#owner}/${this.#repo}/`;
+    const url = new URL(`${repoUrl}/refs/heads/${this.#ref}/${remoteFilename}`);
 
-      // If 404, try next filename
-      if (response.status === 404) {
-        continue;
-      }
-
-      // Other HTTP errors should fail
-      if (!response.ok) {
-        return Result.err(
-          new FileDownloadError(url, {
-            cause: new Error(
-              `HTTP ${response.status}: ${response.statusText}`,
-            ),
-          }),
-        );
-      }
-
-      // Download and save the file
-      const contentResult = await ResultAsync.fromPromise(
-        response.text(),
-        (error) => new FileDownloadError(url, { cause: error }),
-      ).toResult();
-
-      if (contentResult.isErr()) {
-        return contentResult;
-      }
-
+    return this.#fetchRawContent(url.toString()).andThen((content) => {
       // Create a unique filename based on repository owner and name
-      const uniqueFilename = `LICENSE-${this.#owner}-${this.#repo}`;
+      const uniqueFilename = `license_${this.#owner}-${this.#repo}.txt`;
       const localPath = join(outputPath, uniqueFilename);
 
       // Write LICENSE file to disk
-      const writeResult = await ResultAsync.fromPromise(
-        Deno.writeTextFile(localPath, contentResult.data),
-        (error) => new FileWriteError(localPath, { cause: error }),
-      ).toResult();
-
-      return writeResult;
-    }
-
-    // All filenames tried, none found - silently succeed
-    return Result.ok(undefined);
+      return safeWriteFile(localPath, content);
+    });
   }
 
   /**
@@ -442,7 +351,7 @@ class GitHubClient {
    * @param url - API endpoint URL
    * @returns A ResultAsync containing the parsed JSON response or an error
    */
-  #fetchJson<T>(url: string): ResultAsync<T, GitHubClientError> {
+  #fetchJson<T>(url: string) {
     const headers: Record<string, string> = {
       "Accept": "application/vnd.github.v3+json",
       "User-Agent": "alacritty-theme-switch",
@@ -453,26 +362,8 @@ class GitHubClient {
       headers["Authorization"] = `Bearer ${this.#token}`;
     }
 
-    return ResultAsync.fromPromise(
-      fetch(url, { headers }),
-      (error) => new GitHubApiError(url, { cause: error }),
-    ).flatMap((response) => {
-      if (!response.ok) {
-        const err = new GitHubApiError(
-          url,
-          {
-            cause: new Error(
-              `HTTP ${response.status}: ${response.statusText}`,
-            ),
-          },
-        );
-        return ResultAsync.err(err);
-      }
-      return ResultAsync.fromPromise(
-        response.json() as Promise<T>,
-        (error) => new GitHubApiError(url, { cause: error }),
-      );
-    });
+    return safeFetch(url, (error) => new GitHubApiError(url, { cause: error }))
+      .map((response) => response.json() as Promise<T>); // TODO: Add parsing/validation!
   }
 
   /**
@@ -484,43 +375,39 @@ class GitHubClient {
    * @param url - Raw content URL
    * @returns A ResultAsync containing the text content or an error
    */
-  #fetchRawContent(url: string): ResultAsync<string, GitHubClientError> {
-    return ResultAsync.fromPromise(
-      fetch(url),
+  #fetchRawContent(url: string) {
+    return safeFetch(
+      url,
       (error) => new FileDownloadError(url, { cause: error }),
-    ).flatMap((response) => {
-      if (!response.ok) {
-        const err = new FileDownloadError(
-          url,
-          {
-            cause: new Error(
-              `HTTP ${response.status}: ${response.statusText}`,
-            ),
-          },
-        );
-        return ResultAsync.err(err);
-      }
-      return ResultAsync.fromPromise(
-        response.text(),
-        (error) => new FileDownloadError(url, { cause: error }),
-      );
-    });
+    ).map((response) => response.text());
   }
+}
 
-  /**
-   * Ensures that a directory exists, creating it if necessary.
-   *
-   * @param dirPath - Directory path to ensure
-   * @returns A ResultAsync that resolves when the directory exists or an error
-   */
-  #ensureDirectory(
-    dirPath: FilePath,
-  ): ResultAsync<void, GitHubClientError> {
-    return ResultAsync.fromPromise(
-      ensureDir(dirPath),
-      (error) => new DirectoryCreateError(dirPath, { cause: error }),
-    );
-  }
+/**
+ * Fetches a URL and returns the response as a ResultAsync.
+ *
+ * @param url - URL to fetch
+ * @param errorMapper - Function to map fetch errors to custom errors
+ * @returns A ResultAsync containing the response or an error
+ */
+function safeFetch<TErr>(
+  url: string,
+  errorMapper: (error: unknown) => TErr,
+): ResultAsync<Response, TErr> {
+  return fromPromise(
+    fetch(url),
+    errorMapper,
+  ).andThen((response) => {
+    if (!response.ok) {
+      const cause = new Error(
+        `HTTP ${response.status}: ${response.statusText}`,
+      );
+      return errAsync(
+        errorMapper(cause),
+      );
+    }
+    return okAsync(response);
+  });
 }
 
 /**
@@ -579,7 +466,6 @@ function parseRepositoryUrl(url: string): RepositoryInfo | null {
  * @returns A Result containing the GitHubClient instance or an InvalidRepositoryUrlError
  *
  * @example
- * ```typescript
  * import { createGitHubClient } from "./github/client.ts";
  *
  * const clientResult = createGitHubClient("https://github.com/alacritty/alacritty-theme");
@@ -588,14 +474,13 @@ function parseRepositoryUrl(url: string): RepositoryInfo | null {
  *   const client = clientResult.data;
  *
  *   // List all themes in the repository
- *   const themesResult = await client.listThemes().toResult();
+ *   const themesResult = await client.listThemes()
  *   if (themesResult.isOk()) {
  *     console.log(`Found ${themesResult.data.length} themes`);
  *   }
  * } else {
  *   console.error("Invalid repository URL:", clientResult.error);
  * }
- * ```
  */
 export function createGitHubClient(
   repositoryUrl: string,
@@ -605,13 +490,13 @@ export function createGitHubClient(
   const repoInfo = parseRepositoryUrl(repositoryUrl);
 
   if (!repoInfo) {
-    return Result.err(new InvalidRepositoryUrlError(repositoryUrl));
+    return err(new InvalidRepositoryUrlError(repositoryUrl));
   }
 
   // Use provided token or fall back to GITHUB_TOKEN environment variable
   const authToken = token ?? Deno.env.get("GITHUB_TOKEN");
 
-  return Result.ok(
+  return ok(
     new GitHubClient(repoInfo.owner, repoInfo.repo, ref, authToken),
   );
 }

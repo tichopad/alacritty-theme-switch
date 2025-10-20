@@ -3,7 +3,7 @@
   "version": "3.0.0-rc.5",
   "license": "MIT",
   "tasks": {
-    "fix": "deno fmt && deno lint",
+    "preflight": "deno fmt && deno lint && deno check && deno task test",
     "check": "deno fmt --check && deno lint && deno check",
     "dev": "deno run --allow-write --allow-env --allow-read --allow-net --watch ./src/main.ts",
     "run": "deno run --allow-write --allow-env --allow-read --allow-net ./src/main.ts",
@@ -20,6 +20,8 @@
     "@std/fs": "jsr:@std/fs@1.0.19",
     "@std/path": "jsr:@std/path@1.1.2",
     "@std/testing": "jsr:@std/testing@1.0.15",
-    "@std/toml": "jsr:@std/toml@1.0.8"
+    "@std/toml": "jsr:@std/toml@1.0.8",
+    "neverthrow": "npm:neverthrow@8.2.0",
+    "p-map": "npm:p-map@7.0.3"
   }
 }

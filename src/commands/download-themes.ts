@@ -9,13 +9,7 @@ import {
   ProgressBar,
   type ProgressBarFormatter,
 } from "@std/cli/unstable-progress-bar";
-import { ResultAsync } from "../no-exceptions/result-async.ts";
 import { createGitHubClient } from "../theme-manager/github/client.ts";
-import type {
-  GitHubClientError,
-  InvalidRepositoryUrlError,
-} from "../theme-manager/github/errors.ts";
-import type { Theme } from "../theme-manager/theme.ts";
 import type { FilePath } from "../types.ts";
 
 /**
@@ -29,11 +23,6 @@ export type DownloadThemesOptions = {
   /** Git reference (branch, tag, or commit SHA) to download from (default: "master") */
   ref?: string;
 };
-
-/**
- * Error types that can be returned by the download-themes command.
- */
-export type DownloadThemesError = InvalidRepositoryUrlError | GitHubClientError;
 
 /**
  * Execute the download-themes command.
@@ -60,39 +49,25 @@ export type DownloadThemesError = InvalidRepositoryUrlError | GitHubClientError;
  * }
  * ```
  */
-export function downloadThemesCommand(
-  options: DownloadThemesOptions,
-): ResultAsync<Theme[], DownloadThemesError> {
-  const { repositoryUrl, outputPath, ref = "master" } = options;
+export function downloadThemesCommand(options: DownloadThemesOptions) {
+  const ghClientResult = createGitHubClient(options.repositoryUrl, options.ref);
 
-  const gitHubClientResult = createGitHubClient(repositoryUrl, ref);
-  if (gitHubClientResult.isErr()) {
-    return ResultAsync.err(gitHubClientResult.error);
-  }
-
-  const gitHubClient = gitHubClientResult.data;
-
-  // List all remote themes first
-  const themesResult = gitHubClient.listThemes();
-  const downloadThemesResult = themesResult.flatMap((themes) => {
-    // Track progress
-    const progressBar = new ProgressBar({
-      max: themes.length,
-      formatter: progressBarFormatter,
-    });
-    // Fetch themes
-    return gitHubClient.downloadAllThemes(
-      themes,
-      outputPath,
-      (current, _total) => {
-        progressBar.value = current;
-      },
-    ).finally(() => {
-      progressBar.stop();
-    });
+  return ghClientResult.asyncAndThen((ghClient) => {
+    return ghClient.listThemes()
+      .andThen((themes) => {
+        const progressBar = new ProgressBar({
+          max: themes.length,
+          formatter: progressBarFormatter,
+        });
+        return ghClient.downloadAllThemes(
+          themes,
+          options.outputPath,
+          (current, _total) => progressBar.value = current,
+        )
+          .andTee(() => progressBar.stop()) // clean up
+          .orTee(() => progressBar.stop());
+      });
   });
-
-  return downloadThemesResult;
 }
 
 /**

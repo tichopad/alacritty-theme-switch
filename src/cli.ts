@@ -1,6 +1,9 @@
+import interactiveSearchPrompt from "@inquirer/search";
 import { parseArgs } from "@std/cli/parse-args";
 import { join } from "@std/path/join";
+import { fromPromise } from "neverthrow";
 import denoJson from "../deno.json" with { type: "json" };
+import type { IThemeManager } from "./theme-manager/theme-manager.ts";
 import type { FilePath } from "./types.ts";
 
 type PositionalCommand = "download-themes" | "clear-themes";
@@ -150,6 +153,92 @@ export function printHelp() {
  */
 export function printVersion() {
   console.log(denoJson.version);
+}
+
+class ExitPromptError extends Error {
+  _tag = "ExitPromptError";
+  constructor(options?: ErrorOptions) {
+    super("Cancelled by user.", options);
+  }
+}
+class InteractiveSearchError extends Error {
+  _tag = "InteractiveSearchError";
+  constructor(options?: ErrorOptions) {
+    super("Interactive search prompt failed.", options);
+  }
+}
+
+/**
+ * Displays an interactive prompt to select a theme.
+ * @param themeManager - Theme manager instance
+ * @returns A ResultAsync containing the selected theme or an error
+ */
+export function interactiveThemesSelection(themeManager: IThemeManager) {
+  const themes = themeManager.listThemes();
+  const activeTheme = themeManager.getFirstActiveTheme();
+
+  const filterThemesOnInput = (input: string | undefined) => {
+    return themes
+      .filter((theme) => {
+        // If no input, show all themes
+        if (!input) {
+          return true;
+        }
+        // Match on brightness
+        if (/^light|dark$/i.test(input)) {
+          return theme.brightness === input.trim().toLowerCase();
+        }
+        // Dumb fuzzy matching
+        const inputWords = input.split(/\s+/);
+        const allMatch = inputWords.every((word) =>
+          theme.label.toLowerCase().includes(word.toLowerCase())
+        );
+        if (allMatch) {
+          return true;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        // Sort by brightness first (dark before light)
+        if (a.brightness !== b.brightness) {
+          return a.brightness === "dark" ? -1 : 1;
+        }
+        // Then sort alphabetically by label
+        return a.label.localeCompare(b.label, undefined, { numeric: true });
+      })
+      .map((theme) => {
+        // Add brightness indicator to theme name
+        const brightnessIcon = theme.brightness === "light" ? "☀️ " : "🌙";
+        const themeName = `${brightnessIcon} ${theme.label}`;
+
+        return {
+          name: theme.isCurrentlyActive
+            ? underscore(bold(themeName) + " ✨")
+            : themeName,
+          value: theme,
+        };
+      });
+  };
+
+  return fromPromise(
+    interactiveSearchPrompt({
+      message: activeTheme
+        ? `Select Alacritty color theme (current: ${activeTheme.label})`
+        : `Select Alacritty color theme`,
+      instructions: {
+        navigation: "Use arrow keys to navigate (or type to search)",
+        pager: "Use space to select and enter to confirm",
+      },
+      pageSize: 10,
+      source: filterThemesOnInput,
+    }),
+    (error) => {
+      if (Error.isError(error) && error.name === "ExitPromptError") {
+        return new ExitPromptError({ cause: error });
+      }
+      return new InteractiveSearchError({ cause: error });
+    },
+  );
 }
 
 /**

@@ -1,17 +1,6 @@
 /**
- * Module for defining custom error types for the theme manager.
+ * Error thrown when creating a backup fails.
  */
-
-import type {
-  DirectoryIsFileError,
-  DirectoryNotAccessibleError,
-  DirectoryNotDirectoryError,
-  FileIsDirectoryError,
-  FileNotFoundError,
-  FileNotReadableError,
-  FileNotTOMLError,
-} from "../errors/file-and-dir-errors.ts";
-
 export class BackupError extends Error {
   readonly _tag = "BackupError";
   path: string;
@@ -21,6 +10,9 @@ export class BackupError extends Error {
   }
 }
 
+/**
+ * Error thrown when a theme is not found.
+ */
 export class ThemeNotFoundError extends Error {
   readonly _tag = "ThemeNotFoundError";
   filename: string;
@@ -30,6 +22,9 @@ export class ThemeNotFoundError extends Error {
   }
 }
 
+/**
+ * Error thrown when a theme is not a TOML file.
+ */
 export class ThemeNotTOMLError extends Error {
   readonly _tag = "ThemeNotTOMLError";
   path: string;
@@ -39,6 +34,9 @@ export class ThemeNotTOMLError extends Error {
   }
 }
 
+/**
+ * Error thrown when no themes are found in a directory.
+ */
 export class NoThemesFoundError extends Error {
   readonly _tag = "NoThemesFoundError";
   path: string;
@@ -50,31 +48,3 @@ export class NoThemesFoundError extends Error {
     this.path = path;
   }
 }
-
-export class TomlParseError extends Error {
-  readonly _tag = "TomlParseError";
-  content: string;
-  constructor(content: string, options?: ErrorOptions) {
-    super(`Failed to parse TOML content.`, options);
-    this.content = content;
-  }
-}
-
-export type ParseConfigError =
-  | FileNotFoundError
-  | FileNotReadableError
-  | FileNotTOMLError
-  | FileIsDirectoryError;
-
-export type CheckThemeExistsError =
-  | ThemeNotFoundError
-  | ThemeNotTOMLError
-  | FileNotFoundError;
-
-export type LoadThemesError =
-  | DirectoryIsFileError
-  | DirectoryNotDirectoryError
-  | DirectoryNotAccessibleError
-  | NoThemesFoundError
-  | FileNotReadableError
-  | FileNotFoundError;

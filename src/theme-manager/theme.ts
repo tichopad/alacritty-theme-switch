@@ -1,6 +1,7 @@
 import { basename } from "@std/path/basename";
 import type { FilePath } from "../types.ts";
-import { detectThemeBrightness, unslugify } from "./utils.ts";
+import { unslugify } from "../utils/string-utils.ts";
+import { detectThemeBrightness } from "../utils/theme-utils.ts";
 
 type ThemeContent = Record<string, unknown> & {
   colors?: {

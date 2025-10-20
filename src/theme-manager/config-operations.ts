@@ -1,205 +1,92 @@
 import { copy } from "@std/fs/copy";
 import { dirname } from "@std/path/dirname";
-import { stringify } from "@std/toml/stringify";
-import {
-  DirectoryIsFileError,
-  DirectoryNotAccessibleError,
-  DirectoryNotDirectoryError,
-  FileIsDirectoryError,
-  FileNotFoundError,
-  FileNotReadableError,
-  FileNotTOMLError,
-  WriteError,
-} from "../errors/file-and-dir-errors.ts";
-import { ResultAsync } from "../no-exceptions/result-async.ts";
-import {
-  safeEnsureDir,
-  safeStat,
-  safeWalkAll,
-  safeWriteFile,
-} from "../utils.ts";
-import {
-  BackupError,
-  type LoadThemesError,
-  NoThemesFoundError,
-  type ParseConfigError,
-  ThemeNotFoundError,
-  ThemeNotTOMLError,
-} from "./errors.ts";
-import { Theme } from "./theme.ts";
+import { errAsync, fromPromise, okAsync, type ResultAsync } from "neverthrow";
 import type { Config, FilePath } from "../types.ts";
-import { isToml, safeParseToml } from "./utils.ts";
+import { FileIsDirectoryError, FileNotTOMLError } from "../utils/fs-errors.ts";
+import { safeEnsureDir, safeStat, safeWriteFile } from "../utils/fs-utils.ts";
+import {
+  isToml,
+  safeParseToml,
+  safeStringifyToml,
+} from "../utils/toml-utils.ts";
+import { BackupError } from "./errors.ts";
 
 /**
  * Creates a backup copy of the configuration file.
+ *
+ * @param configPath - Path to the configuration file
+ * @param backupPath - Path to the backup file
+ * @returns A ResultAsync containing void or an error
  */
-export function createBackup(configPath: string, backupPath: string) {
-  return ResultAsync.fromPromise(
-    copy(configPath, backupPath, { overwrite: true }).then(() => null),
+export function createBackup(
+  configPath: string,
+  backupPath: string,
+): ResultAsync<void, BackupError> {
+  return fromPromise(
+    copy(configPath, backupPath, { overwrite: true }),
     (error) => new BackupError(configPath, { cause: error }),
   );
 }
 
 /**
  * Writes the configuration to the specified file in a safe manner.
+ *
+ * @param path - Path to the configuration file
+ * @param config - Configuration to write
+ * @returns A ResultAsync containing void or an error
  */
 export function writeConfigToFile(path: string, config: Config) {
-  return ResultAsync.fromPromise(
-    Deno.writeTextFile(path, stringify(config)),
-    (error) => new WriteError(path, { cause: error }),
-  );
+  return safeStringifyToml(config)
+    .asyncAndThen((content) => safeWriteFile(path, content));
 }
 
 /**
  * Ensures the configuration file exists, creating it with minimal config if needed.
+ *
+ * @param configPath - Path to the configuration file
+ * @returns A ResultAsync containing void or an error
  */
 function ensureConfigFile(configPath: FilePath) {
   return safeStat(configPath)
-    .map(() => null)
-    .orElse(() => {
-      const parentDir = dirname(configPath);
-      return safeEnsureDir(parentDir).flatMap(() => {
-        const minimalConfig: Config = {
-          general: {
-            import: [],
-          },
-        };
-        return safeWriteFile(configPath, stringify(minimalConfig));
-      });
+    .orElse((error) => {
+      if (error._tag === "FileNotFoundError") {
+        const parentDir = dirname(configPath);
+        const ensureDirResult = safeEnsureDir(parentDir);
+        return ensureDirResult.andThen(() => {
+          const minimalConfig: Config = {
+            general: {
+              import: [],
+            },
+          };
+          return safeStringifyToml(minimalConfig)
+            .asyncAndThen((content) => safeWriteFile(configPath, content));
+        });
+      }
+      return errAsync(error);
     });
 }
 
 /**
  * Parses an Alacritty configuration file from TOML format.
  * Creates the file with minimal configuration if it doesn't exist.
- */
-export function parseConfig(configPath: FilePath) {
-  if (!isToml(configPath)) {
-    return ResultAsync.err(new FileNotTOMLError(configPath));
-  }
-
-  return ensureConfigFile(configPath).flatMap(() => {
-    return validateFile(configPath).flatMap(
-      (stat): ResultAsync<Config, ParseConfigError> => {
-        if (stat.isDirectory) {
-          return ResultAsync.err(new FileIsDirectoryError(configPath));
-        }
-        if (!stat.isFile) {
-          return ResultAsync.err(new FileNotReadableError(configPath));
-        }
-        return safeParseToml(configPath);
-      },
-    );
-  });
-}
-
-/**
- * Validates that a theme with the given filename exists and is accessible.
- */
-export function checkThemeExists(filename: string, allThemes: Theme[]) {
-  const theme = allThemes.find((theme) => theme.path.endsWith(filename));
-
-  if (theme === undefined) {
-    return ResultAsync.err(new ThemeNotFoundError(filename));
-  }
-
-  if (!isToml(theme.path)) {
-    return ResultAsync.err(new ThemeNotTOMLError(theme.path));
-  }
-
-  return validateFile(theme.path).map(() => theme);
-}
-
-function ensureThemesDirectory(themeDirPath: FilePath) {
-  return safeStat(themeDirPath)
-    .flatMap((stat) => {
-      if (stat.isFile) {
-        return ResultAsync.err(new DirectoryIsFileError(themeDirPath));
-      }
-      return ResultAsync.ok(stat);
-    })
-    .orElse((error) => {
-      // If the path doesn't exist, that's fine - we'll create it
-      if (error._tag === "FileNotFoundError") {
-        return ResultAsync.ok(null);
-      }
-      // Any other error should be propagated
-      return ResultAsync.err(error);
-    })
-    .flatMap(() => safeEnsureDir(themeDirPath));
-}
-
-type LoadThemesOutput = ResultAsync<
-  Theme[],
-  LoadThemesError
->;
-/**
- * Discovers and loads all TOML theme files from the specified directory.
- * Detects the brightness (light/dark) of each theme by parsing its content.
- * Creates the themes directory if it doesn't exist.
  *
- * If any theme file cannot be read or parsed, the entire operation fails with
- * an error indicating which file caused the problem.
+ * @param configPath - Path to the configuration file
+ * @returns A ResultAsync containing the parsed configuration or an error
  */
-export function loadThemes(themeDirPath: FilePath): LoadThemesOutput {
-  return ensureThemesDirectory(themeDirPath)
-    .flatMap(() => validateDir(themeDirPath))
-    .flatMap(() => {
-      const entriesResult = safeWalkAll(themeDirPath, {
-        exts: ["toml"],
-        includeFiles: true,
-        includeDirs: false,
-      });
-      return entriesResult.flatMap((entries): LoadThemesOutput => {
-        if (entries.length === 0) {
-          return ResultAsync.err(new NoThemesFoundError(themeDirPath));
-        }
+export function parseConfig(
+  configPath: FilePath,
+) {
+  //TODO: Should validate and return a Config type
+  if (!isToml(configPath)) {
+    return errAsync(new FileNotTOMLError(configPath));
+  }
 
-        const themeResults = entries.map((entry) => {
-          return safeParseToml(entry.path).map((themeContent) =>
-            new Theme(entry.path, themeContent, null)
-          );
-        });
-
-        return ResultAsync.all(themeResults);
-      });
-    });
-}
-
-/**
- * Safely checks if a file exists and is accessible.
- */
-function validateFile(filePath: FilePath) {
-  const stat = ResultAsync.fromPromise(
-    Deno.stat(filePath),
-    (error) => new FileNotFoundError(filePath, { cause: error }),
-  );
-  return stat.flatMap((stat): ResultAsync<Deno.FileInfo, ParseConfigError> => {
-    if (stat.isDirectory) {
-      return ResultAsync.err(new FileIsDirectoryError(filePath));
-    }
-    if (!stat.isFile) {
-      return ResultAsync.err(new FileNotReadableError(filePath));
-    }
-    return ResultAsync.ok(stat);
-  });
-}
-
-/**
- * Safely checks if a directory exists and is accessible.
- */
-function validateDir(dirPath: FilePath) {
-  const stat = ResultAsync.fromPromise(
-    Deno.stat(dirPath),
-    (error) => new DirectoryNotAccessibleError(dirPath, { cause: error }),
-  );
-  return stat.flatMap((stat): ResultAsync<Deno.FileInfo, LoadThemesError> => {
-    if (stat.isFile) {
-      return ResultAsync.err(new DirectoryIsFileError(dirPath));
-    }
-    if (!stat.isDirectory) {
-      return ResultAsync.err(new DirectoryNotDirectoryError(dirPath));
-    }
-    return ResultAsync.ok(stat);
-  });
+  return ensureConfigFile(configPath)
+    .andThen(() => safeStat(configPath))
+    .andThen((stat) => {
+      return stat.isFile
+        ? okAsync(stat)
+        : errAsync(new FileIsDirectoryError(configPath));
+    })
+    .andThen(() => safeParseToml(configPath));
 }
