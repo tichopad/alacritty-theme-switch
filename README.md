@@ -21,6 +21,9 @@ Install the tool:
 # Via install script (Linux/macOS)
 curl -fsSL https://raw.githubusercontent.com/tichopad/alacritty-theme-switch/refs/heads/main/install.sh | sh
 
+# Via install script (Windows PowerShell)
+irm https://raw.githubusercontent.com/tichopad/alacritty-theme-switch/refs/heads/main/install.ps1 | iex
+
 # Via npm
 npm install -g alacritty-theme-switch
 
@@ -63,7 +66,22 @@ After installation, you may need to add `~/.local/bin` to your PATH if it's not 
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-**Note:** Windows is not supported by this installer. Use npm or JSR instead.
+### Via install script (Windows)
+
+The easiest way to install on Windows is using the PowerShell install script:
+
+```powershell
+irm https://raw.githubusercontent.com/tichopad/alacritty-theme-switch/refs/heads/main/install.ps1 | iex
+```
+
+This script will:
+
+- Automatically detect your CPU architecture (x86_64 only)
+- Download the latest release binary for Windows
+- Install it to `%LOCALAPPDATA%\Programs\ats\ats.exe`
+- Add the installation directory to your user PATH
+
+**Note:** You'll need to restart your terminal after installation for PATH changes to take effect.
 
 ### Via npm
 
