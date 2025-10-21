@@ -18,6 +18,9 @@ programmatically.
 Install the tool:
 
 ```bash
+# Via install script (Linux/macOS)
+curl -fsSL https://raw.githubusercontent.com/tichopad/alacritty-theme-switch/refs/heads/main/install.sh | sh
+
 # Via npm
 npm install -g alacritty-theme-switch
 
@@ -38,6 +41,29 @@ ats
 ```
 
 ## Installation
+
+### Via install script (Linux/macOS)
+
+The easiest way to install on Linux or macOS is using the install script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tichopad/alacritty-theme-switch/refs/heads/main/install.sh | sh
+```
+
+This script will:
+
+- Automatically detect your OS and CPU architecture
+- Download the latest release binary for your platform
+- Install it to `~/.local/bin/ats`
+- Make it executable
+
+After installation, you may need to add `~/.local/bin` to your PATH if it's not already there:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+**Note:** Windows is not supported by this installer. Use npm or JSR instead.
 
 ### Via npm
 

@@ -20,9 +20,9 @@ should be imported from JSR (jsr:@std/...) as shown in deno.json.
 
 ### Error handling
 
-Use the custom Result and ResultAsync types for all operations that can fail.
-Functions should return Result<T, E> or ResultAsync<T, E> instead of throwing
-exceptions. Define specific error types with `_tag` discriminants (see
+Use the `neverthrow` library for all operations that can fail. Functions should
+return `Result<T, E>` or `ResultAsync<T, E>` instead of throwing exceptions.
+Define specific error types with `_tag` discriminants (see
 `src/theme-manager/errors.ts`). Use union types to compose multiple possible
 error types in function signatures.
 
@@ -37,8 +37,8 @@ Provide realistic usage examples in JSDoc comments.
 
 #### Code style
 
-Prefer explicit type annotations over inference for public APIs. Use map,
-flatMap and other functional methods on Result/ResultAsync. Treat data as
+Prefer explicit type annotations over inference for public APIs. Use `map`,
+`andThen` and other functional methods on `Result`/`ResultAsync`. Treat data as
 immutable. Avoid mutating objects; create new objects when changes are needed.
 Strive for clear naming. Use descriptive names that explain intent (e.g.,
 `applyThemeByFilename` vs `apply`).
@@ -49,16 +49,18 @@ Strive for clear naming. Use descriptive names that explain intent (e.g.,
 
 ```typescript
 // Good: Explicit error handling with typed errors
-function parseConfig(path: string): ResultAsync<Config, ParseConfigError> {
-  return ResultAsync.fromPromise(Deno.readTextFile(path))
-    .mapErr((error) => new FileNotFoundError(path, { cause: error }))
-    .flatMap((content) => parseToml(content));
+import { fromPromise, type ResultAsync } from "neverthrow";
+
+function readConfig(path: string): ResultAsync<string, FileNotFoundError> {
+  return fromPromise(
+    Deno.readTextFile(path),
+    (error) => new FileNotFoundError(path, { cause: error })
+  );
 }
 
 // Bad: Throwing exceptions
-function parseConfig(path: string): Promise<Config> {
-  const content = await Deno.readTextFile(path); // Can throw
-  return parseToml(content); // Can throw
+async function readConfig(path: string): Promise<string> {
+  return await Deno.readTextFile(path); // Can throw
 }
 ```
 
@@ -81,15 +83,11 @@ improves code clarity by making dependencies explicit and avoids unnecessary
 indirection.
 
 ```typescript
-// Good: Direct imports from specific modules
-import { GitHubClient } from "../src/theme-manager/github/client.ts";
-import { InvalidRepositoryUrlError } from "../src/theme-manager/github/errors.ts";
+// Good: Direct imports
+import { GitHubClient } from "./github/client.ts";
 
-// Bad: Importing from barrel files
-import {
-  GitHubClient,
-  InvalidRepositoryUrlError,
-} from "../src/theme-manager/github/index.ts";
+// Bad: Barrel files
+import { GitHubClient } from "./github/index.ts";
 ```
 
 ## File Structure Conventions
@@ -99,11 +97,11 @@ import {
 ```
 src/
 ├── main.ts              # CLI entry point
-├── cli.ts               # CLI argument parsing and help
-├── result.ts            # Result/ResultAsync implementation
-└── theme-manager/       # Theme management domain
-    ├── theme-manager.ts # Core theme management logic
-    └── errors.ts        # Domain-specific error types
+├── cli.ts               # CLI argument parsing
+├── types.ts             # Shared type definitions
+├── commands/            # CLI command implementations
+├── theme-manager/       # Theme management domain
+└── utils/               # Utility functions
 ```
 
 ### Naming conventions
@@ -137,16 +135,15 @@ Node.js tests that should be ignored.
 ### Test Structure
 
 ```typescript
-import { assertEquals, assertRejects } from "@std/assert";
-import { Result } from "../src/result.ts";
+import { assertEquals } from "@std/assert";
 
 Deno.test("should parse valid configuration", async () => {
-  const result = await parseConfig("valid-config.toml").toResult();
+  const result = await parseConfig("valid.toml");
   assertEquals(result.isOk(), true);
 });
 
 Deno.test("should return error for missing file", async () => {
-  const result = await parseConfig("missing.toml").toResult();
+  const result = await parseConfig("missing.toml");
   assertEquals(result.isErr(), true);
   assertEquals(result.error._tag, "FileNotFoundError");
 });
@@ -180,23 +177,23 @@ operations.
 ### Configuration Loading
 
 ```typescript
-// Load and parse configuration with proper error handling
-const config = ResultAsync.fromPromise(Deno.readTextFile(configPath))
-  .mapErr((error) => new FileNotFoundError(configPath, { cause: error }))
-  .flatMap((content) => parseToml(content))
-  .mapErr((error) => new FileNotTOMLError(configPath, { cause: error }));
+import { fromPromise } from "neverthrow";
+
+const config = fromPromise(
+  Deno.readTextFile(path),
+  (e) => new FileNotFoundError(path, { cause: e })
+).andThen((content) => parseToml(content));
 ```
 
 ### Validation Chains
 
 ```typescript
-// Chain validations using flatMap
 function validateTheme(
-  path: string,
+  path: string
 ): ResultAsync<Theme, CheckThemeExistsError> {
   return checkFileExists(path)
-    .flatMap(() => checkIsFile(path))
-    .flatMap(() => checkIsTomlFile(path))
+    .andThen(() => checkIsFile(path))
+    .andThen(() => checkIsTomlFile(path))
     .map(() => ({ path, label: getThemeLabel(path) }));
 }
 ```
@@ -204,12 +201,11 @@ function validateTheme(
 ### Error Aggregation
 
 ```typescript
-// Collect multiple errors when processing lists
 const results = await Promise.all(
-  themePaths.map((path) => validateTheme(path).toResult()),
+  themePaths.map((path) => validateTheme(path))
 );
 const errors = results.filter((r) => r.isErr()).map((r) => r.error);
-const themes = results.filter((r) => r.isOk()).map((r) => r.data);
+const themes = results.filter((r) => r.isOk()).map((r) => r.value);
 ```
 
 Remember: This codebase prioritizes correctness and maintainability over
