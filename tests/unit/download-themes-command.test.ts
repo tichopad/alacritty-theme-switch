@@ -5,6 +5,7 @@
 import { assertEquals, assertExists } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { downloadThemesCommand } from "../../src/commands/download-themes.ts";
+import type { Theme } from "../../src/theme-manager/theme.ts";
 
 // Mock GitHub API responses
 const mockTreeResponse = {
@@ -57,7 +58,7 @@ Deno.test("downloadThemesCommand: returns error for invalid repository URL", asy
   const result = await downloadThemesCommand({
     repositoryUrl: "invalid-url",
     outputPath: "/tmp/themes",
-  }).toResult();
+  });
 
   assertEquals(result.isErr(), true);
   if (result.isErr()) {
@@ -108,17 +109,17 @@ Deno.test("downloadThemesCommand: successfully downloads themes from repository"
     const result = await downloadThemesCommand({
       repositoryUrl: "https://github.com/alacritty/alacritty-theme",
       outputPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      const themes = result.data;
+      const themes = result.value;
       assertEquals(themes.length, 3);
 
       // Verify all themes were downloaded
-      const monokaiTheme = themes.find((t) => t.label === "Monokai");
-      const draculaTheme = themes.find((t) => t.label === "Dracula");
-      const solarizedTheme = themes.find((t) => t.label === "Solarized");
+      const monokaiTheme = themes.find((t: Theme) => t.label === "Monokai");
+      const draculaTheme = themes.find((t: Theme) => t.label === "Dracula");
+      const solarizedTheme = themes.find((t: Theme) => t.label === "Solarized");
 
       assertExists(monokaiTheme);
       assertExists(draculaTheme);
@@ -186,7 +187,7 @@ Deno.test("downloadThemesCommand: handles GitHub API errors", async () => {
     const result = await downloadThemesCommand({
       repositoryUrl: "https://github.com/alacritty/alacritty-theme",
       outputPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isErr(), true);
     if (result.isErr()) {
@@ -248,12 +249,11 @@ Deno.test("downloadThemesCommand: returns ResultAsync that can be chained", asyn
 
     // Chain a map operation to verify it's a proper ResultAsync
     const mappedResult = await resultAsync
-      .map((themes) => themes.length)
-      .toResult();
+      .map((themes: Theme[]) => themes.length);
 
     assertEquals(mappedResult.isOk(), true);
     if (mappedResult.isOk()) {
-      assertEquals(mappedResult.data, 3);
+      assertEquals(mappedResult.value, 3);
     }
   } finally {
     fetchStub.restore();
@@ -330,7 +330,7 @@ Deno.test("downloadThemesCommand: uses custom ref parameter", async () => {
       repositoryUrl: "https://github.com/alacritty/alacritty-theme",
       outputPath: tempDir,
       ref: "develop",
-    }).toResult();
+    });
 
     assertEquals(result.isOk(), true);
 
@@ -402,7 +402,7 @@ Deno.test("downloadThemesCommand: defaults to 'master' ref when not specified", 
       repositoryUrl: "https://github.com/alacritty/alacritty-theme",
       outputPath: tempDir,
       // ref not specified, should default to "master"
-    }).toResult();
+    });
 
     assertEquals(result.isOk(), true);
 

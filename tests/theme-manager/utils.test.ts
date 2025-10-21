@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 import { parse } from "@std/toml/parse";
-import { detectThemeBrightness } from "../../src/theme-manager/utils.ts";
+import { detectThemeBrightness } from "../../src/utils/theme-utils.ts";
 
 Deno.test("detectThemeBrightness - should detect dark theme (one-dark)", () => {
   const theme = {

@@ -22,6 +22,7 @@ import { Theme } from "./theme.ts";
 
 /**
  * Theme manager encapsulates all operations related to theme management.
+ * @internal Use `createThemeManager` to create an instance.
  */
 class ThemeManager {
   /** Alacritty configuration */

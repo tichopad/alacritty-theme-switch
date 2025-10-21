@@ -15,7 +15,13 @@ import { stringify } from "@std/toml/stringify";
  * Check if the given path is a TOML file.
  */
 export function isToml(path: string): boolean {
-  return extname(path) === ".toml";
+  const ext = extname(path);
+  // Handle edge case where filename is just ".toml" (hidden file with no extension)
+  // In this case, extname returns "" but we should still consider it a TOML file
+  if (ext === "" && path.endsWith(".toml")) {
+    return true;
+  }
+  return ext === ".toml";
 }
 
 /**

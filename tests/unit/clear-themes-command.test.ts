@@ -28,11 +28,11 @@ Deno.test("clearThemesCommand: successfully deletes all theme files", async () =
   try {
     const result = await clearThemesCommand({
       themesPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      assertEquals(result.data.length, 3);
+      assertEquals(result.value.length, 3);
 
       // Verify theme files were deleted
       const theme1Exists = await Deno.stat(`${tempDir}/theme1.toml`)
@@ -64,7 +64,7 @@ Deno.test("clearThemesCommand: successfully deletes all theme files", async () =
 Deno.test("clearThemesCommand: returns error for nonexistent directory", async () => {
   const result = await clearThemesCommand({
     themesPath: "/nonexistent/directory",
-  }).toResult();
+  });
 
   assertEquals(result.isErr(), true);
   if (result.isErr()) {
@@ -81,7 +81,7 @@ Deno.test("clearThemesCommand: returns error for empty directory", async () => {
   try {
     const result = await clearThemesCommand({
       themesPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isErr(), true);
     if (result.isErr()) {
@@ -106,7 +106,7 @@ Deno.test("clearThemesCommand: returns error for directory with no toml files", 
   try {
     const result = await clearThemesCommand({
       themesPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isErr(), true);
     if (result.isErr()) {
@@ -144,11 +144,11 @@ Deno.test("clearThemesCommand: deletes themes in subdirectories", async () => {
   try {
     const result = await clearThemesCommand({
       themesPath: tempDir,
-    }).toResult();
+    });
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      assertEquals(result.data.length, 3);
+      assertEquals(result.value.length, 3);
 
       // Verify all theme files were deleted
       const theme1Exists = await Deno.stat(`${tempDir}/theme1.toml`)
@@ -192,12 +192,11 @@ Deno.test("clearThemesCommand: returns ResultAsync that can be chained", async (
 
     // Chain a map operation to verify it's a proper ResultAsync
     const mappedResult = await resultAsync
-      .map((paths) => `Deleted ${paths.length} files`)
-      .toResult();
+      .map((paths) => `Deleted ${paths.length} files`);
 
     assertEquals(mappedResult.isOk(), true);
     if (mappedResult.isOk()) {
-      assertEquals(mappedResult.data, "Deleted 2 files");
+      assertEquals(mappedResult.value, "Deleted 2 files");
     }
   } finally {
     // Clean up temp directory

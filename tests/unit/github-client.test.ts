@@ -2,6 +2,7 @@ import { assertEquals, assertExists } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { createGitHubClient } from "../../src/theme-manager/github/client.ts";
 import { InvalidRepositoryUrlError } from "../../src/theme-manager/github/errors.ts";
+import type { Theme } from "../../src/theme-manager/theme.ts";
 
 // Mock GitHub API responses
 const mockTreeResponse = {
@@ -60,7 +61,9 @@ Deno.test("createGitHubClient: should parse valid HTTPS URL", () => {
     "https://github.com/alacritty/alacritty-theme",
   );
   assertEquals(result.isOk(), true);
-  assertExists(result.data);
+  if (result.isOk()) {
+    assertExists(result.value);
+  }
 });
 
 Deno.test("createGitHubClient: should parse valid HTTPS URL with .git", () => {
@@ -68,7 +71,9 @@ Deno.test("createGitHubClient: should parse valid HTTPS URL with .git", () => {
     "https://github.com/alacritty/alacritty-theme.git",
   );
   assertEquals(result.isOk(), true);
-  assertExists(result.data);
+  if (result.isOk()) {
+    assertExists(result.value);
+  }
 });
 
 Deno.test("createGitHubClient: should parse valid SSH URL", () => {
@@ -76,13 +81,17 @@ Deno.test("createGitHubClient: should parse valid SSH URL", () => {
     "git@github.com:alacritty/alacritty-theme.git",
   );
   assertEquals(result.isOk(), true);
-  assertExists(result.data);
+  if (result.isOk()) {
+    assertExists(result.value);
+  }
 });
 
 Deno.test("createGitHubClient: should return error on invalid URL", () => {
   const result = createGitHubClient("not-a-valid-url");
   assertEquals(result.isErr(), true);
-  assertEquals(result.error instanceof InvalidRepositoryUrlError, true);
+  if (result.isErr()) {
+    assertEquals(result.error instanceof InvalidRepositoryUrlError, true);
+  }
 });
 
 Deno.test("GitHubClient: listThemes should return themes from repository", async () => {
@@ -111,16 +120,16 @@ Deno.test("GitHubClient: listThemes should return themes from repository", async
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
-    const result = await client.listThemes().toResult();
+    const client = clientResult.value;
+    const result = await client.listThemes();
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      assertEquals(Array.isArray(result.data), true);
-      assertEquals(result.data.length, 2); // Only 2 TOML files in mock data
+      assertEquals(Array.isArray(result.value), true);
+      assertEquals(result.value.length, 2); // Only 2 TOML files in mock data
 
       // Check that all themes have required properties
-      result.data.forEach((theme) => {
+      result.value.forEach((theme: Theme) => {
         assertExists(theme.path);
         assertExists(theme.label);
         assertEquals(theme.isCurrentlyActive, null);
@@ -128,10 +137,10 @@ Deno.test("GitHubClient: listThemes should return themes from repository", async
       });
 
       // Verify specific themes
-      assertEquals(result.data[0].path, "themes/monokai.toml");
-      assertEquals(result.data[0].label, "Monokai");
-      assertEquals(result.data[1].path, "themes/dracula.toml");
-      assertEquals(result.data[1].label, "Dracula");
+      assertEquals(result.value[0].path, "themes/monokai.toml");
+      assertEquals(result.value[0].label, "Monokai");
+      assertEquals(result.value[1].path, "themes/dracula.toml");
+      assertEquals(result.value[1].label, "Dracula");
     }
   } finally {
     fetchStub.restore();
@@ -166,15 +175,15 @@ Deno.test("GitHubClient: downloadTheme should download a single theme", async ()
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
     const result = await client.downloadTheme(
       "themes/monokai.toml",
       tempDir,
-    ).toResult();
+    );
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      const theme = result.data;
+      const theme = result.value;
       assertExists(theme.path);
       assertEquals(theme.label, "Monokai");
       assertEquals(theme.isCurrentlyActive, null);
@@ -224,11 +233,11 @@ Deno.test("GitHubClient: downloadTheme should handle API errors", async () => {
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
     const result = await client.downloadTheme(
       "themes/nonexistent.toml",
       tempDir,
-    ).toResult();
+    );
 
     assertEquals(result.isErr(), true);
   } finally {
@@ -299,10 +308,10 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
 
     // First list themes
-    const themesResult = await client.listThemes().toResult();
+    const themesResult = await client.listThemes();
     assertEquals(themesResult.isOk(), true);
 
     if (!themesResult.isOk()) {
@@ -310,17 +319,16 @@ Deno.test("GitHubClient: downloadAllThemes should download all themes", async ()
     }
 
     // Then download them
-    const result = await client.downloadAllThemes(themesResult.data, tempDir)
-      .toResult();
+    const result = await client.downloadAllThemes(themesResult.value, tempDir);
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
-      const themes = result.data;
+      const themes = result.value;
       assertEquals(themes.length, 2);
 
       // Verify both themes were downloaded
-      const monokaiTheme = themes.find((t) => t.label === "Monokai");
-      const draculaTheme = themes.find((t) => t.label === "Dracula");
+      const monokaiTheme = themes.find((t: Theme) => t.label === "Monokai");
+      const draculaTheme = themes.find((t: Theme) => t.label === "Dracula");
 
       assertExists(monokaiTheme);
       assertExists(draculaTheme);
@@ -409,10 +417,10 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
 
     // First list themes
-    const themesResult = await client.listThemes().toResult();
+    const themesResult = await client.listThemes();
     assertEquals(themesResult.isOk(), true);
 
     if (!themesResult.isOk()) {
@@ -420,8 +428,7 @@ Deno.test("GitHubClient: downloadAllThemes should handle partial failures", asyn
     }
 
     // Then download them (should fail on one)
-    const result = await client.downloadAllThemes(themesResult.data, tempDir)
-      .toResult();
+    const result = await client.downloadAllThemes(themesResult.value, tempDir);
 
     // Should fail if any download fails
     assertEquals(result.isErr(), true);
@@ -508,10 +515,10 @@ Deno.test("GitHubClient: downloadAllThemes should download LICENSE file", async 
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
 
     // First list themes
-    const themesResult = await client.listThemes().toResult();
+    const themesResult = await client.listThemes();
     assertEquals(themesResult.isOk(), true);
 
     if (!themesResult.isOk()) {
@@ -519,8 +526,7 @@ Deno.test("GitHubClient: downloadAllThemes should download LICENSE file", async 
     }
 
     // Then download them
-    const result = await client.downloadAllThemes(themesResult.data, tempDir)
-      .toResult();
+    const result = await client.downloadAllThemes(themesResult.value, tempDir);
 
     assertEquals(result.isOk(), true);
     if (result.isOk()) {
@@ -640,10 +646,10 @@ Deno.test("GitHubClient: downloadAllThemes should try multiple LICENSE filenames
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
 
     // First list themes
-    const themesResult = await client.listThemes().toResult();
+    const themesResult = await client.listThemes();
     assertEquals(themesResult.isOk(), true);
 
     if (!themesResult.isOk()) {
@@ -651,8 +657,7 @@ Deno.test("GitHubClient: downloadAllThemes should try multiple LICENSE filenames
     }
 
     // Then download them
-    const result = await client.downloadAllThemes(themesResult.data, tempDir)
-      .toResult();
+    const result = await client.downloadAllThemes(themesResult.value, tempDir);
 
     assertEquals(result.isOk(), true);
 
@@ -761,10 +766,10 @@ Deno.test("GitHubClient: downloadAllThemes should succeed when no LICENSE file e
       throw new Error("Failed to create client");
     }
 
-    const client = clientResult.data;
+    const client = clientResult.value;
 
     // First list themes
-    const themesResult = await client.listThemes().toResult();
+    const themesResult = await client.listThemes();
     assertEquals(themesResult.isOk(), true);
 
     if (!themesResult.isOk()) {
@@ -772,8 +777,7 @@ Deno.test("GitHubClient: downloadAllThemes should succeed when no LICENSE file e
     }
 
     // Then download them - should succeed even without LICENSE
-    const result = await client.downloadAllThemes(themesResult.data, tempDir)
-      .toResult();
+    const result = await client.downloadAllThemes(themesResult.value, tempDir);
 
     assertEquals(
       result.isOk(),

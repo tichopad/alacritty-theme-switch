@@ -1,5 +1,6 @@
 import { assertEquals } from "@std/assert";
-import { isToml, unslugify } from "../../src/theme-manager/utils.ts";
+import { unslugify } from "../../src/utils/string-utils.ts";
+import { isToml } from "../../src/utils/toml-utils.ts";
 
 Deno.test("unslugify: basic underscore replacement", () => {
   assertEquals(unslugify("monokai_pro.toml"), "Monokai Pro");

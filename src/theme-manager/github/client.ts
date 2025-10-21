@@ -237,7 +237,16 @@ class GitHubClient {
     const downloadResult = fromSafePromise(downloadResultsPromises)
       .andThen((results) => Result.combine(results))
       .andThen((themes) => {
-        return this.#downloadLicense(outputPath).map(() => themes); // Return themes
+        // Try to download LICENSE, but don't fail if it doesn't exist
+        return this.#downloadLicense(outputPath)
+          .orElse((error) => {
+            // Silently succeed if no LICENSE file is found
+            if (error._tag === "NoLicenseFileFoundError") {
+              return okAsync(undefined);
+            }
+            return errAsync(error);
+          })
+          .map(() => themes); // Return themes regardless of LICENSE download result
       });
 
     return downloadResult;
@@ -336,7 +345,7 @@ class GitHubClient {
 
     return this.#fetchRawContent(url.toString()).andThen((content) => {
       // Create a unique filename based on repository owner and name
-      const uniqueFilename = `license_${this.#owner}-${this.#repo}.txt`;
+      const uniqueFilename = `LICENSE-${this.#owner}-${this.#repo}`;
       const localPath = join(outputPath, uniqueFilename);
 
       // Write LICENSE file to disk
