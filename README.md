@@ -60,7 +60,8 @@ This script will:
 - Install it to `~/.local/bin/ats`
 - Make it executable
 
-After installation, you may need to add `~/.local/bin` to your PATH if it's not already there:
+After installation, you may need to add `~/.local/bin` to your PATH if it's not
+already there:
 
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
@@ -81,7 +82,8 @@ This script will:
 - Install it to `%LOCALAPPDATA%\Programs\ats\ats.exe`
 - Add the installation directory to your user PATH
 
-**Note:** You'll need to restart your terminal after installation for PATH changes to take effect.
+**Note:** You'll need to restart your terminal after installation for PATH
+changes to take effect.
 
 ### Via npm
 

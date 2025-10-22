@@ -1,2 +1,3 @@
-- [ ] Install script for the binary distribution
+- [x] Install script for the binary distribution
+- [ ] Install script E2E smoke tests
 - [ ] Release to Homebrew?

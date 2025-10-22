@@ -54,7 +54,7 @@ import { fromPromise, type ResultAsync } from "neverthrow";
 function readConfig(path: string): ResultAsync<string, FileNotFoundError> {
   return fromPromise(
     Deno.readTextFile(path),
-    (error) => new FileNotFoundError(path, { cause: error })
+    (error) => new FileNotFoundError(path, { cause: error }),
   );
 }
 
@@ -181,7 +181,7 @@ import { fromPromise } from "neverthrow";
 
 const config = fromPromise(
   Deno.readTextFile(path),
-  (e) => new FileNotFoundError(path, { cause: e })
+  (e) => new FileNotFoundError(path, { cause: e }),
 ).andThen((content) => parseToml(content));
 ```
 
@@ -189,7 +189,7 @@ const config = fromPromise(
 
 ```typescript
 function validateTheme(
-  path: string
+  path: string,
 ): ResultAsync<Theme, CheckThemeExistsError> {
   return checkFileExists(path)
     .andThen(() => checkIsFile(path))
@@ -202,7 +202,7 @@ function validateTheme(
 
 ```typescript
 const results = await Promise.all(
-  themePaths.map((path) => validateTheme(path))
+  themePaths.map((path) => validateTheme(path)),
 );
 const errors = results.filter((r) => r.isErr()).map((r) => r.error);
 const themes = results.filter((r) => r.isOk()).map((r) => r.value);
