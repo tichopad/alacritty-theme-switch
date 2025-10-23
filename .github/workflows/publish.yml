@@ -116,7 +116,7 @@ jobs:
         run: npx jsr publish
 
   build-binaries:
-    name: Build and upload binaries (${{ needs.checks-and-tests.outputs.version }}${{ needs.checks-and-tests.outputs.npm_tag == 'beta' && ' [beta]' || '' }})
+    name: Build and upload binaries - ${{ matrix.target }} (${{ needs.checks-and-tests.outputs.version }}${{ needs.checks-and-tests.outputs.npm_tag == 'beta' && ' [beta]' || '' }})
     runs-on: ${{ matrix.os }}
     needs: checks-and-tests
     permissions:
