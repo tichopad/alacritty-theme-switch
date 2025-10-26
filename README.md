@@ -5,6 +5,8 @@
 you store multiple theme configurations and switch between them interactively or
 programmatically.
 
+![ats](https://github.com/user-attachments/assets/52307c79-d427-4aff-a6f2-8f6705b110da)
+
 ## Features
 
 - **Interactive theme selection** with fuzzy search
