@@ -9,7 +9,7 @@ programmatically.
 
 ## Features
 
-- **Interactive theme selection** with fuzzy search
+- **Interactive theme selection**
 - **Download themes** directly from GitHub repositories
 - **Automatic backups** of your configuration before each switch
 - **Non-destructive merging** of theme files with your main config
