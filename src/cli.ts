@@ -225,9 +225,11 @@ export function interactiveThemesSelection(themeManager: IThemeManager) {
       message: activeTheme
         ? `Select Alacritty color theme (current: ${activeTheme.label})`
         : `Select Alacritty color theme`,
-      instructions: {
-        navigation: "Use arrow keys to navigate (or type to search)",
-        pager: "Use space to select and enter to confirm",
+      theme: {
+        style: {
+          keysHelpTip: () =>
+            "(Use arrow keys to navigate, type to search, space to select and enter to confirm)",
+        },
       },
       pageSize: 10,
       source: filterThemesOnInput,
