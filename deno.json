@@ -1,6 +1,6 @@
 {
   "name": "@tichopad/alacritty-theme-switch",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "license": "MIT",
   "tasks": {
     "preflight": "deno fmt && deno lint && deno check && deno task test",
